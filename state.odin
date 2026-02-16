@@ -24,6 +24,7 @@ Game_State_Result :: struct {
 	time_accumulator: f32,
 	skip_loop:        bool,
 	is_restart:       bool,
+	wants_save:       bool,
 }
 
 process_game_state :: proc(state: Game_State, gd: ^Game_Data) -> Game_State_Result {
@@ -31,6 +32,7 @@ process_game_state :: proc(state: Game_State, gd: ^Game_Data) -> Game_State_Resu
 	time_accumulator: f32 = 0
 	skip_loop := false
 	is_restart := false
+	wants_save := false
 
 	switch new_state {
 	case .Playing:
@@ -42,12 +44,12 @@ process_game_state :: proc(state: Game_State, gd: ^Game_Data) -> Game_State_Resu
 	case .Paused:
 		if rl.IsKeyPressed(.ESCAPE) {
 			new_state = .Playing
-		}
-		if rl.IsKeyPressed(.Q) {
+		} else if rl.IsKeyPressed(.S) {
+			wants_save = true
+		} else if rl.IsKeyPressed(.Q) {
 			new_state = .Quit
-		} else {
-			print_centered_text("Game Paused\nPress [Esc] to Return, [Q] to Quit", gd.camera, 0)
 		}
+		print_centered_text("Game Paused\n[Esc] Resume  [S] Save  [Q] Main Menu", gd.camera, 0)
 		skip_loop = true
 
 	case .Level_Up:
@@ -59,7 +61,11 @@ process_game_state :: proc(state: Game_State, gd: ^Game_Data) -> Game_State_Resu
 
 	case .Game_Over:
 		buf: [256]byte
-		score_text := fmt.bprintf(buf[:], "Game Over\nScore: %d\nPress [R] to Replay, [Q] to Quit\x00", gd.player.score)
+		score_text := fmt.bprintf(
+			buf[:],
+			"Game Over\nScore: %d\n[R] Replay  [Q] Main Menu\x00",
+			gd.player.score,
+		)
 		print_centered_text(string(score_text), gd.camera, 0)
 
 		key := rl.GetKeyPressed()
@@ -78,9 +84,10 @@ process_game_state :: proc(state: Game_State, gd: ^Game_Data) -> Game_State_Resu
 	}
 
 	return Game_State_Result {
-		new_state        = new_state,
+		new_state = new_state,
 		time_accumulator = time_accumulator,
-		skip_loop        = skip_loop,
-		is_restart       = is_restart,
+		skip_loop = skip_loop,
+		is_restart = is_restart,
+		wants_save = wants_save,
 	}
 }

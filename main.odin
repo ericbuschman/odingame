@@ -57,7 +57,9 @@ game_restart :: proc(gd: ^Game_Data) {
 	clear(&gd.melee_attacks)
 }
 
-game_update :: proc(game: ^Game) {
+game_update :: proc(app: ^App) {
+	game, ok := &app.game.?
+	if !ok {return}
 	gd := &game.game_data
 
 	// Camera follows player
@@ -71,10 +73,6 @@ game_update :: proc(game: ^Game) {
 		min(gd.camera.target.y, game.map_height - gd.camera.offset.y),
 	)
 
-	rl.BeginDrawing()
-	defer rl.EndDrawing()
-
-	rl.ClearBackground(rl.BLACK)
 	rl.BeginMode2D(gd.camera)
 	defer rl.EndMode2D()
 
@@ -85,6 +83,16 @@ game_update :: proc(game: ^Game) {
 	gd.state = gsr.new_state
 	gd.time_accumulator += f64(gsr.time_accumulator)
 	if gsr.is_restart {game_restart(gd)}
+	if gsr.wants_save {save_game(game)}
+
+	// Return to main menu
+	if gd.state == .Quit {
+		game_deinit(game)
+		app.game = nil
+		app.state = .Main_Menu
+		return
+	}
+
 	if gsr.skip_loop {return}
 
 	when !DEBUG_NO_ENEMIES {
@@ -184,14 +192,33 @@ main :: proc() {
 	rl.SetTargetFPS(60)
 	rl.SetExitKey(.KEY_NULL)
 
-	game, ok := game_init()
-	if !ok {
-		fmt.eprintln("Failed to initialize game")
-		return
+	app := App {
+		state    = .Main_Menu,
+		settings = settings_load(),
 	}
-	defer game_deinit(&game)
+	settings_apply(app.settings)
 
-	for !rl.WindowShouldClose() && game.game_data.state != .Quit {
-		game_update(&game)
+	for !rl.WindowShouldClose() && app.state != .Quitting {
+		rl.BeginDrawing()
+		rl.ClearBackground(rl.BLACK)
+
+		switch app.state {
+		case .Main_Menu:
+			main_menu_update(&app)
+		case .Settings:
+			settings_menu_update(&app)
+		case .Playing:
+			game_update(&app)
+		case .Quitting:
+		// handled by loop condition
+		}
+
+		rl.EndDrawing()
 	}
+
+	// Cleanup
+	if g, ok := &app.game.?; ok {
+		game_deinit(g)
+	}
+	settings_save(app.settings)
 }
