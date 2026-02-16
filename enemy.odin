@@ -33,17 +33,17 @@ enemy_new :: proc(
 	health: i32,
 ) -> Enemy {
 	return Enemy {
-		loc         = loc,
-		sprite      = sprite,
+		loc = loc,
+		sprite = sprite,
 		personality = personality,
-		state       = .Idle,
-		rotation    = 0,
-		title       = title,
-		speed       = speed,
-		health      = health,
-		active      = true,
-		attacks     = make([dynamic]Attack, 0, 4),
-		scale       = 2.0,
+		state = .Idle,
+		rotation = 0,
+		title = title,
+		speed = speed,
+		health = health,
+		active = true,
+		attacks = make([dynamic]Attack, 0, 4),
+		scale = 2.0,
 	}
 }
 
@@ -88,7 +88,7 @@ enemy_movement :: proc(e: ^Enemy, p: ^Player, obstacles: []rl.Rectangle) {
 
 	switch e.state {
 	case .Idle:
-		// do nothing
+	// do nothing
 	case .Towards_Player:
 		new_loc = move_towards(e.loc, player_center, e.speed, rl.GetFrameTime(), keep_distance)
 	case .Keep_Away:
@@ -112,7 +112,7 @@ enemy_movement :: proc(e: ^Enemy, p: ^Player, obstacles: []rl.Rectangle) {
 				break
 			}
 		}
-		if collision { e.loc.x = original_x }
+		if collision {e.loc.x = original_x}
 
 		// Try Y
 		original_y := e.loc.y
@@ -125,23 +125,26 @@ enemy_movement :: proc(e: ^Enemy, p: ^Player, obstacles: []rl.Rectangle) {
 				break
 			}
 		}
-		if collision { e.loc.y = original_y }
+		if collision {e.loc.y = original_y}
 	}
 }
 
 enemy_update_attacks :: proc(e: ^Enemy, target: rl.Vector2, spawn_queue: ^[dynamic]Spawn_Request) {
 	for &atk in e.attacks {
-		if get_attack(&atk) {
+		if attack_tick(&atk) {
 			switch cfg in atk.attack_type {
 			case Melee_Config:
-				// enemies don't use melee in original
+			// enemies don't use melee in original
 			case Projectile_Config:
-				append(spawn_queue, Spawn_Request {
-					parent = e,
-					target = target,
-					damage = atk.damage,
-					speed  = cfg.speed,
-				})
+				append(
+					spawn_queue,
+					Spawn_Request {
+						parent = e,
+						target = target,
+						damage = atk.damage,
+						speed = cfg.speed,
+					},
+				)
 			}
 		}
 	}

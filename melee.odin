@@ -21,23 +21,28 @@ Melee_Attack :: struct {
 	active:       bool,
 }
 
-melee_new :: proc(parent: Entity, target: rl.Vector2, damage: i32, style: Attack_Style) -> Melee_Attack {
+melee_new :: proc(
+	parent: Entity,
+	target: rl.Vector2,
+	damage: i32,
+	style: Attack_Style,
+) -> Melee_Attack {
 	center := entity_get_center(parent)
 	dx := target.x - center.x
 	dy := target.y - center.y
 	angle := math.atan2(dy, dx)
 
 	return Melee_Attack {
-		parent       = parent,
+		parent = parent,
 		target_angle = angle,
-		style        = style,
-		damage       = damage,
-		width        = 4.0,
-		length       = 40.0,
+		style = style,
+		damage = damage,
+		width = 4.0,
+		length = 40.0,
 		sweep_radius = math.PI,
-		duration     = 0.75,
-		elapsed      = 0,
-		active       = true,
+		duration = 0.75,
+		elapsed = 0,
+		active = true,
 	}
 }
 
@@ -54,16 +59,16 @@ melee_new_with_params :: proc(
 	angle := math.atan2(dy, dx)
 
 	return Melee_Attack {
-		parent       = parent,
+		parent = parent,
 		target_angle = angle,
-		style        = style,
-		damage       = damage,
-		width        = width,
-		length       = length,
+		style = style,
+		damage = damage,
+		width = width,
+		length = length,
 		sweep_radius = sweep_radius,
-		duration     = duration,
-		elapsed      = 0,
-		active       = true,
+		duration = duration,
+		elapsed = 0,
+		active = true,
 	}
 }
 
@@ -84,8 +89,8 @@ melee_get_edge_point :: proc(atk: ^Melee_Attack, angle: f32) -> rl.Vector2 {
 	t_x: f32 = math.INF_F32
 	t_y: f32 = math.INF_F32
 
-	if cos_a != 0 { t_x = half_w / abs(cos_a) }
-	if sin_a != 0 { t_y = half_h / abs(sin_a) }
+	if cos_a != 0 {t_x = half_w / abs(cos_a)}
+	if sin_a != 0 {t_y = half_h / abs(sin_a)}
 
 	t := min(t_x, t_y)
 
@@ -93,21 +98,9 @@ melee_get_edge_point :: proc(atk: ^Melee_Attack, angle: f32) -> rl.Vector2 {
 }
 
 melee_check_collision :: proc(atk: ^Melee_Attack, other: Entity) -> bool {
-	if !atk.active { return false }
+	if !atk.active {return false}
 
-	// Don't hit parent
-	switch p in atk.parent {
-	case ^Player:
-		switch o in other {
-		case ^Player: if p == o { return false }
-		case ^Enemy:
-		}
-	case ^Enemy:
-		switch o in other {
-		case ^Enemy: if p == o { return false }
-		case ^Player:
-		}
-	}
+	if entity_same(atk.parent, other) {return false}
 
 	t := melee_progress(atk)
 	other_area := entity_get_area(other)
@@ -152,7 +145,7 @@ melee_check_collision :: proc(atk: ^Melee_Attack, other: Entity) -> bool {
 }
 
 melee_update :: proc(atk: ^Melee_Attack) {
-	if !atk.active { return }
+	if !atk.active {return}
 	atk.elapsed += rl.GetFrameTime()
 	if atk.elapsed >= atk.duration {
 		atk.active = false
@@ -160,7 +153,7 @@ melee_update :: proc(atk: ^Melee_Attack) {
 }
 
 melee_draw :: proc(atk: ^Melee_Attack) {
-	if !atk.active { return }
+	if !atk.active {return}
 
 	t := melee_progress(atk)
 
@@ -191,6 +184,4 @@ melee_draw :: proc(atk: ^Melee_Attack) {
 		rl.DrawLineEx(start, end_pt, atk.width * 3, glow_color)
 		rl.DrawLineEx(start, end_pt, atk.width, line_color)
 	}
-
-	melee_update(atk)
 }

@@ -109,7 +109,12 @@ player_dash :: proc(p: ^Player, target: rl.Vector2) {
 	}
 }
 
-player_movement :: proc(p: ^Player, gd: ^Game_Data, obstacles: []rl.Rectangle) {
+player_movement :: proc(
+	p: ^Player,
+	gd: ^Game_Data,
+	obstacles: []rl.Rectangle,
+	bounds: rl.Rectangle,
+) {
 	dt := rl.GetFrameTime()
 
 	// Gather input direction
@@ -231,8 +236,8 @@ player_movement :: proc(p: ^Player, gd: ^Game_Data, obstacles: []rl.Rectangle) {
 	// Clamp to map
 	p_width := rect_x.width
 	p_height := rect_x.height
-	p.loc.x = clamp(p.loc.x, play_area.x, play_area.width - p_width)
-	p.loc.y = clamp(p.loc.y, play_area.y, play_area.height - p_height)
+	p.loc.x = clamp(p.loc.x, bounds.x, bounds.width - p_width)
+	p.loc.y = clamp(p.loc.y, bounds.y, bounds.height - p_height)
 }
 
 player_draw :: proc(p: ^Player) {
@@ -242,11 +247,17 @@ player_draw :: proc(p: ^Player) {
 	}
 }
 
-player_update :: proc(p: ^Player, gd: ^Game_Data, obstacles: []rl.Rectangle, target: rl.Vector2) {
-	player_movement(p, gd, obstacles)
+player_update :: proc(
+	p: ^Player,
+	gd: ^Game_Data,
+	obstacles: []rl.Rectangle,
+	target: rl.Vector2,
+	bounds: rl.Rectangle,
+) {
+	player_movement(p, gd, obstacles, bounds)
 
 	for &atk in p.attacks {
-		if get_attack(&atk) {
+		if attack_tick(&atk) {
 			switch cfg in atk.attack_type {
 			case Melee_Config:
 				m := melee_new_with_params(

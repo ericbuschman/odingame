@@ -1,10 +1,12 @@
 package main
 
+import "core:fmt"
 import "core:math"
+import "core:strings"
 import rl "vendor:raylib"
 
 draw_hud :: proc(heart_tex: rl.Texture2D, hp: i32, camera: ^rl.Camera2D) {
-	if hp <= 0 { return }
+	if hp <= 0 {return}
 
 	screen_loc := rl.GetScreenToWorld2D({10, 0}, camera^)
 
@@ -87,24 +89,37 @@ draw_card :: proc(rect: rl.Rectangle, text: cstring, mouse_pos: rl.Vector2) -> b
 	rl.DrawRectangleLinesEx(rect, 2, rl.SKYBLUE if hovered else rl.WHITE)
 
 	font_size: i32 = 20
+	padding: i32 = 10
+	max_width := i32(rect.width) - padding * 2
 
-	// Handle multi-line text for "Additional Projectile"
-	if text == "Additional Projectile" {
-		line1 :: "Additional"
-		line2 :: "Projectile"
-		w1 := rl.MeasureText(line1, font_size)
-		w2 := rl.MeasureText(line2, font_size)
-		x1 := rect.x + (rect.width - f32(w1)) / 2
-		x2 := rect.x + (rect.width - f32(w2)) / 2
-		center_y := rect.y + rect.height / 2
-		line_h := f32(font_size)
-		rl.DrawText(line1, i32(x1), i32(center_y - line_h), font_size, rl.WHITE)
-		rl.DrawText(line2, i32(x2), i32(center_y), font_size, rl.WHITE)
-	} else {
-		text_w := rl.MeasureText(text, font_size)
-		text_x := rect.x + (rect.width - f32(text_w)) / 2
-		text_y := rect.y + (rect.height - f32(font_size)) / 2
-		rl.DrawText(text, i32(text_x), i32(text_y), font_size, rl.WHITE)
+	wrapped_buf: [256]byte
+	wrapped, ok := word_wrap(string(text), wrapped_buf[:], max_width, font_size)
+	if !ok {return false}
+
+	// Count lines and measure for centering
+	num_lines: i32 = 0
+	{
+		tmp := wrapped
+		for _ in strings.split_lines_iterator(&tmp) {
+			num_lines += 1
+		}
+	}
+
+	line_spacing: i32 = 2
+	block_height := num_lines * font_size + (num_lines - 1) * line_spacing
+	start_y := rect.y + (rect.height - f32(block_height)) / 2
+
+	{
+		tmp := wrapped
+		line_idx: i32 = 0
+		for line in strings.split_lines_iterator(&tmp) {
+			c_line := fmt.ctprintf("%s", line)
+			line_w := rl.MeasureText(c_line, font_size)
+			x := rect.x + (rect.width - f32(line_w)) / 2
+			y := start_y + f32(line_idx * (font_size + line_spacing))
+			rl.DrawText(c_line, i32(x), i32(y), font_size, rl.WHITE)
+			line_idx += 1
+		}
 	}
 
 	return false

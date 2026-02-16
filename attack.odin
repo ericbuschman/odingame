@@ -43,17 +43,22 @@ Attack :: struct {
 	remaining_interval: f32,
 }
 
-make_attack :: proc(name: cstring, attack_type: Attack_Type, damage: i32, interval: f32) -> Attack {
+make_attack :: proc(
+	name: cstring,
+	attack_type: Attack_Type,
+	damage: i32,
+	interval: f32,
+) -> Attack {
 	return Attack {
-		name               = name,
-		attack_type        = attack_type,
-		damage             = damage,
-		interval           = interval,
+		name = name,
+		attack_type = attack_type,
+		damage = damage,
+		interval = interval,
 		remaining_interval = interval,
 	}
 }
 
-get_attack :: proc(atk: ^Attack) -> bool {
+attack_tick :: proc(atk: ^Attack) -> bool {
 	atk.remaining_interval -= rl.GetFrameTime()
 	if atk.remaining_interval <= 0 {
 		atk.remaining_interval = atk.interval

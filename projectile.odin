@@ -3,26 +3,6 @@ package main
 import "core:math"
 import rl "vendor:raylib"
 
-Entity :: union {
-	^Player,
-	^Enemy,
-}
-
-entity_get_area :: proc(e: Entity) -> rl.Rectangle {
-	switch v in e {
-	case ^Player:
-		return player_get_area(v)
-	case ^Enemy:
-		return enemy_get_area(v)
-	}
-	return {}
-}
-
-entity_get_center :: proc(e: Entity) -> rl.Vector2 {
-	area := entity_get_area(e)
-	return {area.x + area.width / 2, area.y + area.height / 2}
-}
-
 Projectile :: struct {
 	curloc:   rl.Vector2,
 	velocity: rl.Vector2,
@@ -45,60 +25,43 @@ projectile_new :: proc(parent: Entity, target: rl.Vector2, damage: i32, speed: f
 	}
 
 	return Projectile {
-		curloc   = start_loc,
+		curloc = start_loc,
 		velocity = vel,
-		radius   = 3,
-		color    = rl.WHITE,
-		glow     = false,
-		damage   = damage,
-		active   = true,
-		parent   = parent,
+		radius = 3,
+		color = rl.WHITE,
+		glow = false,
+		damage = damage,
+		active = true,
+		parent = parent,
 	}
 }
 
 projectile_check_collision :: proc(proj: ^Projectile, other: Entity) -> bool {
-	// Don't hit parent
-	is_same: bool
-	switch p in proj.parent {
-	case ^Player:
-		switch o in other {
-		case ^Player:  is_same = p == o
-		case ^Enemy:   is_same = false
-		}
-	case ^Enemy:
-		switch o in other {
-		case ^Enemy:   is_same = p == o
-		case ^Player:  is_same = false
-		}
-	}
-	if is_same { return false }
-
+	if entity_same(proj.parent, other) {return false}
 	return rl.CheckCollisionCircleRec(proj.curloc, proj.radius, entity_get_area(other))
 }
 
-projectile_move :: proc(proj: ^Projectile, camera: rl.Camera2D) {
+projectile_move :: proc(proj: ^Projectile, camera: rl.Camera2D, bounds: rl.Rectangle) {
 	dt := rl.GetFrameTime()
 	proj.curloc += proj.velocity * dt
 
-	if !is_on_screen(proj.curloc, camera) || !is_in_bounds(proj.curloc) {
+	if !is_on_screen(proj.curloc, camera) || !is_in_bounds(proj.curloc, bounds) {
 		proj.active = false
 	}
 }
 
-projectile_draw :: proc(proj: ^Projectile, camera: rl.Camera2D) {
-	if proj.active {
-		if proj.glow {
-			rl.DrawCircleGradient(
-				i32(proj.curloc.x),
-				i32(proj.curloc.y),
-				proj.radius * 4.0,
-				rl.Fade(rl.RED, 0.8),
-				rl.Fade(rl.RED, 0.0),
-			)
-		}
-		rl.DrawCircleV(proj.curloc, proj.radius, proj.color)
+projectile_draw :: proc(proj: ^Projectile) {
+	if !proj.active {return}
+	if proj.glow {
+		rl.DrawCircleGradient(
+			i32(proj.curloc.x),
+			i32(proj.curloc.y),
+			proj.radius * 4.0,
+			rl.Fade(rl.RED, 0.8),
+			rl.Fade(rl.RED, 0.0),
+		)
 	}
-	projectile_move(proj, camera)
+	rl.DrawCircleV(proj.curloc, proj.radius, proj.color)
 }
 
 get_projectile_start_point :: proc(rect: rl.Rectangle, target: rl.Vector2) -> rl.Vector2 {
