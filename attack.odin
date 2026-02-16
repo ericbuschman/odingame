@@ -3,12 +3,6 @@ package main
 import "core:math"
 import rl "vendor:raylib"
 
-Attack_Upgrade :: enum {
-	None,
-	Damage,
-	Proj_Count,
-}
-
 Projectile_Config :: struct {
 	speed:  f32,
 	radius: f32,

@@ -5,23 +5,24 @@ import "core:math"
 import rl "vendor:raylib"
 
 Player :: struct {
-	sprite:         rl.Texture2D,
-	attacks:        [dynamic]Attack,
-	name:           string,
-	loc:            rl.Vector2,
-	velocity:       rl.Vector2,
-	attack_upgrade: Attack_Upgrade,
-	health:         i32,
-	speed:          f32,
-	acceleration:   f32,
-	friction:       f32,
-	scale:          f32,
-	movedir:        Move_Dir,
-	score:          u32,
-	posted_score:   bool,
-	is_dodging:     bool,
-	dodge_timer:    f32,
-	dodge_dir:      rl.Vector2,
+	sprite:           rl.Texture2D,
+	attacks:          [dynamic]Attack,
+	name:             string,
+	loc:              rl.Vector2,
+	velocity:         rl.Vector2,
+	damage_level:     i32,
+	proj_count_level: i32,
+	health:           i32,
+	speed:            f32,
+	acceleration:     f32,
+	friction:         f32,
+	scale:            f32,
+	movedir:          Move_Dir,
+	score:            u32,
+	posted_score:     bool,
+	is_dodging:       bool,
+	dodge_timer:      f32,
+	dodge_dir:        rl.Vector2,
 }
 
 player_init :: proc(sprite: rl.Texture2D) -> Player {
@@ -41,7 +42,8 @@ player_apply_defaults :: proc(p: ^Player) {
 	p.name = "Player"
 	p.loc = {150, 150}
 	p.velocity = {0, 0}
-	p.attack_upgrade = .None
+	p.damage_level = 0
+	p.proj_count_level = 0
 	p.health = 5
 	p.speed = 5.0
 	p.acceleration = 10.0
@@ -273,29 +275,27 @@ player_update :: proc(
 				append(&gd.melee_attacks, m)
 
 			case Projectile_Config:
-				attks: int = 1
-				dmg := atk.damage
-				if p.attack_upgrade == .Damage {
-					dmg *= 2
-				} else if p.attack_upgrade == .Proj_Count {
-					attks += 1
-				}
+				count := 1 + int(p.proj_count_level)
+				dmg := atk.damage * (1 + p.damage_level)
 
-				for i in 0 ..< attks {
+				for i in 0 ..< count {
 					proj := projectile_new(p, target, dmg, cfg.speed)
-					if p.attack_upgrade == .Damage {
+					if p.damage_level > 0 {
 						proj.glow = true
 					}
 
+					// Spread extra projectiles perpendicular to the firing direction
 					if i > 0 {
 						spacing: f32 = 20
-						mult: f32 = f32((i + 1) / 2) if i % 2 != 0 else -f32(i / 2)
+						// Alternate sides: i=1 -> +1, i=2 -> -1, i=3 -> +2, i=4 -> -2, ...
+						side := i32(1) if i % 2 != 0 else i32(-1)
+						offset := f32((i + 1) / 2) * spacing * f32(side)
 						vel_len := rl.Vector2Length(proj.velocity)
 						if vel_len > 0 {
 							perp_x := proj.velocity.y / vel_len
 							perp_y := -proj.velocity.x / vel_len
-							proj.curloc.x += perp_x * spacing * mult
-							proj.curloc.y += perp_y * spacing * mult
+							proj.curloc.x += perp_x * offset
+							proj.curloc.y += perp_y * offset
 						}
 					}
 					append(&gd.projectiles, proj)

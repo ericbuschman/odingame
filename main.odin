@@ -132,7 +132,7 @@ update_enemies :: proc(game: ^Game) {
 			i += 1
 		} else {
 			gd.player.score += 1
-			if gd.player.score % 2 == 0 {
+			if gd.player.score % 3 == 0 {
 				gd.state = .Level_Up
 			}
 			enemy_deinit(enemy)

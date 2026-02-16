@@ -52,11 +52,11 @@ draw_level_up :: proc(gd: ^Game_Data) -> bool {
 	close_panel := false
 
 	if draw_card(left_card, "Plus Damage", mouse_world) {
-		gd.player.attack_upgrade = .Damage
+		gd.player.damage_level += 1
 		close_panel = true
 	}
 	if draw_card(right_card, "Additional Projectile", mouse_world) {
-		gd.player.attack_upgrade = .Proj_Count
+		gd.player.proj_count_level += 1
 		close_panel = true
 	}
 
