@@ -16,6 +16,7 @@ Game_Data :: struct {
 	camera:           rl.Camera2D,
 	state:            Game_State,
 	spawn_requests:   [dynamic]Spawn_Request,
+	menu_nav:         Menu_Nav,
 }
 
 game_data_init :: proc() -> Game_Data {

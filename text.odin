@@ -1,80 +1,10 @@
 package main
 
 import "core:fmt"
-import "core:strings"
 import rl "vendor:raylib"
 
-print_centered_text :: proc(text: string, camera: rl.Camera2D, offset_y: i32) {
-	font_size: i32 = 20
-	line_spacing: i32 = 2
-	padding: i32 = 10
-
-	max_width := SCREEN_WIDTH - 80 - padding * 2
-
-	// Word wrap
-	wrapped_buf: [4096]byte
-	wrapped, ok := word_wrap(text, wrapped_buf[:], max_width, font_size)
-	if !ok { return }
-
-	// Calculate dimensions
-	max_text_width: i32 = 0
-	num_lines: i32 = 0
-
-	// First pass: measure
-	{
-		tmp := wrapped
-		for line in strings.split_lines_iterator(&tmp) {
-			c_line := fmt.ctprintf("%s", line)
-			w := rl.MeasureText(c_line, font_size)
-			if w > max_text_width { max_text_width = w }
-			num_lines += 1
-		}
-	}
-
-	if num_lines == 0 { return }
-
-	text_block_height := num_lines * font_size + (num_lines - 1) * line_spacing
-	box_width := max_text_width + padding * 2
-	box_height := text_block_height + padding * 2
-
-	center_x := i32(camera.target.x)
-	start_y := i32(camera.target.y) + offset_y
-
-	box_x := center_x - box_width / 2
-	box_y := start_y - padding
-
-	draw_border(box_x, box_y, box_width, box_height)
-
-	// Second pass: draw
-	current_y := start_y
-	{
-		tmp := wrapped
-		for line in strings.split_lines_iterator(&tmp) {
-			c_line := fmt.ctprintf("%s", line)
-			text_width := rl.MeasureText(c_line, font_size)
-			x := center_x - text_width / 2
-			rl.DrawText(c_line, x, current_y, font_size, rl.WHITE)
-			current_y += font_size + line_spacing
-		}
-	}
-}
-
-draw_border :: proc(x, y, width, height: i32) {
-	pad: i32 = 10
-	nx := x - pad
-	ny := y - pad
-	nw := width + pad * 2
-	nh := height + pad * 2
-	border_gap: i32 = 3
-
-	bg_color := rl.Color{15, 15, 15, 245}
-	rl.DrawRectangle(nx, ny, nw, nh, bg_color)
-	rl.DrawRectangleLines(nx, ny, nw, nh, rl.WHITE)
-	rl.DrawRectangleLines(nx + border_gap, ny + border_gap, nw - border_gap * 2, nh - border_gap * 2, rl.WHITE)
-}
-
 word_wrap :: proc(text: string, dest: []byte, max_width, font_size: i32) -> (string, bool) {
-	if len(dest) == 0 { return "", false }
+	if len(dest) == 0 {return "", false}
 
 	space_width := rl.MeasureText(" ", font_size)
 

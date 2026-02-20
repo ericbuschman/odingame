@@ -21,6 +21,7 @@ App :: struct {
 	state:    App_State,
 	game:     Maybe(Game),
 	settings: App_Settings,
+	menu_nav: Menu_Nav,
 }
 
 SETTINGS_PATH :: "settings.json"

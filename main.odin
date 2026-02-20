@@ -73,47 +73,58 @@ game_update :: proc(app: ^App) {
 		min(gd.camera.target.y, game.map_height - gd.camera.offset.y),
 	)
 
+	// --- World-space rendering ---
 	rl.BeginMode2D(gd.camera)
-	defer rl.EndMode2D()
-
 	game_map_draw(&game.game_map, gd.camera)
 
-	// Game state
 	gsr := process_game_state(gd.state, gd)
 	gd.state = gsr.new_state
 	gd.time_accumulator += f64(gsr.time_accumulator)
-	if gsr.is_restart {game_restart(gd)}
-	if gsr.wants_save {save_game(game)}
 
-	// Return to main menu
 	if gd.state == .Quit {
+		rl.EndMode2D()
 		game_deinit(game)
 		app.game = nil
 		app.state = .Main_Menu
+		app.menu_nav = menu_nav_open()
 		return
 	}
 
-	if gsr.skip_loop {return}
+	if !gsr.skip_loop {
+		when !DEBUG_NO_ENEMIES {
+			spawn_enemies(game)
+		}
 
-	when !DEBUG_NO_ENEMIES {
-		spawn_enemies(game)
+		update_player(game)
+		update_enemies(game)
+		update_projectiles(game)
+		update_melee_attacks(game)
+
+		// Draw obstructions
+		for b in game.game_map.obstructions {
+			source := rl.Rectangle{0, 0, f32(gd.boulder_tex.width), f32(gd.boulder_tex.height)}
+			rl.DrawTexturePro(gd.boulder_tex, source, b, {0, 0}, 0, rl.WHITE)
+		}
+
+		draw_hud(gd.heart_tex, gd.player.health, &gd.camera)
+		player_draw(&gd.player)
+		particle_system_update(&gd.particles)
+		particle_system_draw(&gd.particles)
 	}
+	rl.EndMode2D()
+	// --- End world-space rendering ---
 
-	update_player(game)
-	update_enemies(game)
-	update_projectiles(game)
-	update_melee_attacks(game)
-
-	// Draw obstructions
-	for b in game.game_map.obstructions {
-		source := rl.Rectangle{0, 0, f32(gd.boulder_tex.width), f32(gd.boulder_tex.height)}
-		rl.DrawTexturePro(gd.boulder_tex, source, b, {0, 0}, 0, rl.WHITE)
+	// --- Screen-space overlay rendering ---
+	switch gd.state {
+	case .Paused:
+		draw_pause_menu(app)
+	case .Game_Over:
+		draw_game_over_menu(app)
+	case .Level_Up:
+		draw_level_up_menu(app)
+	case .Playing, .Quit:
+	// no overlay
 	}
-
-	draw_hud(gd.heart_tex, gd.player.health, &gd.camera)
-	player_draw(&gd.player)
-	particle_system_update(&gd.particles)
-	particle_system_draw(&gd.particles)
 }
 
 update_player :: proc(game: ^Game) {
@@ -142,6 +153,7 @@ update_enemies :: proc(game: ^Game) {
 			gd.player.score += 1
 			if gd.player.score % 3 == 0 {
 				gd.state = .Level_Up
+				gd.menu_nav = menu_nav_open()
 			}
 			enemy_deinit(enemy)
 			unordered_remove(&gd.enemies, i)

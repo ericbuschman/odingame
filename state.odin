@@ -1,6 +1,5 @@
 package main
 
-import "core:fmt"
 import rl "vendor:raylib"
 
 Game_State :: enum {
@@ -23,60 +22,32 @@ Game_State_Result :: struct {
 	new_state:        Game_State,
 	time_accumulator: f32,
 	skip_loop:        bool,
-	is_restart:       bool,
-	wants_save:       bool,
 }
 
 process_game_state :: proc(state: Game_State, gd: ^Game_Data) -> Game_State_Result {
 	new_state := state
 	time_accumulator: f32 = 0
 	skip_loop := false
-	is_restart := false
-	wants_save := false
 
 	switch new_state {
 	case .Playing:
 		if rl.IsKeyPressed(.ESCAPE) {
 			new_state = .Paused
+			gd.menu_nav = menu_nav_open()
 		}
 		time_accumulator += rl.GetFrameTime()
 
 	case .Paused:
+		skip_loop = true
 		if rl.IsKeyPressed(.ESCAPE) {
 			new_state = .Playing
-		} else if rl.IsKeyPressed(.S) {
-			wants_save = true
-		} else if rl.IsKeyPressed(.Q) {
-			new_state = .Quit
+			gd.menu_nav = menu_nav_open()
 		}
-		print_centered_text("Game Paused\n[Esc] Resume  [S] Save  [Q] Main Menu", gd.camera, 0)
-		skip_loop = true
 
 	case .Level_Up:
-		if draw_level_up(gd) {
-			new_state = .Playing
-		} else {
-			skip_loop = true
-		}
+		skip_loop = true
 
 	case .Game_Over:
-		buf: [256]byte
-		score_text := fmt.bprintf(
-			buf[:],
-			"Game Over\nScore: %d\n[R] Replay  [Q] Main Menu\x00",
-			gd.player.score,
-		)
-		print_centered_text(string(score_text), gd.camera, 0)
-
-		key := rl.GetKeyPressed()
-		#partial switch key {
-		case .R:
-			is_restart = true
-			new_state = .Playing
-		case .Q:
-			new_state = .Quit
-		case:
-		}
 		skip_loop = true
 
 	case .Quit:
@@ -87,7 +58,5 @@ process_game_state :: proc(state: Game_State, gd: ^Game_Data) -> Game_State_Resu
 		new_state = new_state,
 		time_accumulator = time_accumulator,
 		skip_loop = skip_loop,
-		is_restart = is_restart,
-		wants_save = wants_save,
 	}
 }

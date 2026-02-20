@@ -32,6 +32,7 @@ resolve_projectile_collisions :: proc(gd: ^Game_Data, obstructions: []rl.Rectang
 			player_take_damage(&gd.player, proj.damage)
 			if gd.player.health <= 0 {
 				gd.state = .Game_Over
+				gd.menu_nav = menu_nav_open()
 			} else {
 				particle_emit_collision(&gd.particles, proj.curloc, rl.RED)
 			}
@@ -69,6 +70,7 @@ resolve_melee_collisions :: proc(gd: ^Game_Data) {
 				player_take_damage(&gd.player, atk.damage)
 				if gd.player.health <= 0 {
 					gd.state = .Game_Over
+					gd.menu_nav = menu_nav_open()
 				} else {
 					p_center := player_get_center(&gd.player)
 					particle_emit_collision(&gd.particles, p_center, rl.RED)
