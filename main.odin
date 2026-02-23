@@ -83,6 +83,7 @@ game_update :: proc(app: ^App) {
 
 	if gd.state == .Quit {
 		rl.EndMode2D()
+		save_game(game)
 		game_deinit(game)
 		app.game = nil
 		app.state = .Main_Menu
@@ -119,6 +120,7 @@ game_update :: proc(app: ^App) {
 	case .Paused:
 		draw_pause_menu(app)
 	case .Game_Over:
+		save_delete()
 		draw_game_over_menu(app)
 	case .Level_Up:
 		draw_level_up_menu(app)

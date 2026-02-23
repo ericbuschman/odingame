@@ -312,9 +312,8 @@ draw_pause_menu :: proc(app: ^App) {
 	if !ok {return}
 	gd := &game.game_data
 
-	buttons := [3]Menu_Button {
+	buttons := [2]Menu_Button {
 		{label = "[Esc] Resume", hotkey = .KEY_NULL}, // Esc toggle handled by process_game_state
-		{label = "[S]ave", hotkey = .S},
 		{label = "[Q]uit", hotkey = .Q},
 	}
 	def := Menu_Def {
@@ -331,8 +330,6 @@ draw_pause_menu :: proc(app: ^App) {
 		gd.state = .Playing
 		gd.menu_nav = menu_nav_open()
 	case 1:
-		save_game(game)
-	case 2:
 		gd.state = .Quit
 		gd.menu_nav = menu_nav_open()
 	}
