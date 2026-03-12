@@ -87,6 +87,7 @@ game_update :: proc(app: ^App) {
 		game_deinit(game)
 		app.game = nil
 		app.state = .Main_Menu
+		gsr.skip_loop = true
 		app.menu_nav = menu_nav_open()
 		return
 	}
