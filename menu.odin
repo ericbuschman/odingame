@@ -10,7 +10,6 @@ import rl "vendor:raylib"
 // ---------------------------------------------------------------------------
 
 Menu_Item_Style :: struct {
-	size:      rl.Vector2,
 	font_size: i32,
 	bg:        rl.Color,
 	border:    rl.Color,
@@ -19,8 +18,9 @@ Menu_Item_Style :: struct {
 	glow_pad:  f32,
 }
 
+BUTTON_W :: f32(250)
+BUTTON_H :: f32(50)
 BUTTON_STYLE :: Menu_Item_Style {
-	size      = {250, 50},
 	font_size = 24,
 	bg        = rl.DARKGRAY,
 	border    = rl.WHITE,
@@ -29,8 +29,9 @@ BUTTON_STYLE :: Menu_Item_Style {
 	glow_pad  = 4,
 }
 
+CARD_W :: f32(180)
+CARD_H :: f32(200)
 CARD_STYLE :: Menu_Item_Style {
-	size      = {180, 200},
 	font_size = 20,
 	bg        = rl.DARKGRAY,
 	border    = rl.WHITE,
@@ -155,12 +156,9 @@ prev_enabled :: proc(buttons: []Menu_Button, current, n: int) -> int {
 // draw_menu — generalized menu engine
 // ---------------------------------------------------------------------------
 
-draw_menu :: proc(def: Menu_Def, nav: ^Menu_Nav, screen_center: rl.Vector2) -> int {
+draw_menu :: proc(def: Menu_Def, nav: ^Menu_Nav, screen_center: rl.Vector2, item_w, item_h: f32) -> int {
 	n := len(def.buttons)
 	if n == 0 {return -1}
-
-	item_w := def.item_style.size.x
-	item_h := def.item_style.size.y
 
 	// Grid dimensions
 	num_cols := 1
@@ -323,7 +321,7 @@ draw_pause_menu :: proc(app: ^App) {
 		item_style = BUTTON_STYLE,
 	}
 	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
-	result := draw_menu(def, &gd.menu_nav, center)
+	result := draw_menu(def, &gd.menu_nav, center, BUTTON_W, BUTTON_H)
 
 	switch result {
 	case 0:
@@ -354,7 +352,7 @@ draw_game_over_menu :: proc(app: ^App) {
 		item_style = BUTTON_STYLE,
 	}
 	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
-	result := draw_menu(def, &gd.menu_nav, center)
+	result := draw_menu(def, &gd.menu_nav, center, BUTTON_W, BUTTON_H)
 
 	switch result {
 	case 0:
@@ -383,7 +381,7 @@ draw_level_up_menu :: proc(app: ^App) {
 		item_style = CARD_STYLE,
 	}
 	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
-	result := draw_menu(def, &gd.menu_nav, center)
+	result := draw_menu(def, &gd.menu_nav, center, CARD_W, CARD_H)
 
 	switch result {
 	case 0:
@@ -417,7 +415,7 @@ main_menu_update :: proc(app: ^App) {
 		item_style = BUTTON_STYLE,
 	}
 	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
-	result := draw_menu(def, &app.menu_nav, center)
+	result := draw_menu(def, &app.menu_nav, center, BUTTON_W, BUTTON_H)
 
 	switch result {
 	case 0:

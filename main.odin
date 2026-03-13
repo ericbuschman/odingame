@@ -108,7 +108,6 @@ game_update :: proc(app: ^App) {
 			rl.DrawTexturePro(gd.boulder_tex, source, b, {0, 0}, 0, rl.WHITE)
 		}
 
-		draw_hud(gd.heart_tex, gd.player.health, &gd.camera)
 		player_draw(&gd.player)
 		particle_system_update(&gd.particles)
 		particle_system_draw(&gd.particles)
@@ -117,6 +116,7 @@ game_update :: proc(app: ^App) {
 	// --- End world-space rendering ---
 
 	// --- Screen-space overlay rendering ---
+	draw_hud(gd.heart_tex, gd.player.health, gd.player.attacks[:], &gd.attack_nav)
 	switch gd.state {
 	case .Paused:
 		draw_pause_menu(app)

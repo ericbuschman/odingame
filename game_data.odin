@@ -17,6 +17,7 @@ Game_Data :: struct {
 	state:            Game_State,
 	spawn_requests:   [dynamic]Spawn_Request,
 	menu_nav:         Menu_Nav,
+	attack_nav:       Menu_Nav,
 }
 
 game_data_init :: proc() -> Game_Data {
