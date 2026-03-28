@@ -539,7 +539,7 @@ draw_fatal_error :: proc(msg: string) {
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
-		result := draw_menu(def, &nav, center)
+		result := draw_menu(def, &nav, center, BUTTON_W, BUTTON_H)
 		rl.EndDrawing()
 		if result >= 0 {break}
 	}
