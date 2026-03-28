@@ -32,8 +32,8 @@ Settings_Json :: struct {
 }
 
 settings_load :: proc() -> App_Settings {
-	data, ok := os.read_entire_file(SETTINGS_PATH)
-	if !ok {
+	data, read_err := os.read_entire_file_from_path(SETTINGS_PATH, context.allocator)
+	if read_err != nil {
 		return App_Settings{master_volume = 0.8, fullscreen = false}
 	}
 	defer delete(data)
@@ -61,7 +61,9 @@ settings_save :: proc(s: App_Settings) {
 	}
 	defer delete(data)
 
-	os.write_entire_file(SETTINGS_PATH, data)
+	if write_err := os.write_entire_file(SETTINGS_PATH, data); write_err != nil {
+		draw_fatal_error(fmt.tprintf("Could not write settings file: %v", write_err))
+	}
 }
 
 settings_apply :: proc(s: App_Settings) {

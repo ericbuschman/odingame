@@ -38,10 +38,11 @@ process_game_state :: proc(state: Game_State, gd: ^Game_Data) -> Game_State_Resu
 		time_accumulator += rl.GetFrameTime()
 
 	case .Paused:
-		skip_loop = true
 		if rl.IsKeyPressed(.ESCAPE) {
 			new_state = .Playing
 			gd.menu_nav = menu_nav_open()
+		} else {
+			skip_loop = true
 		}
 
 	case .Level_Up:

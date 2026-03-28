@@ -54,8 +54,8 @@ Map_Json :: struct {
 }
 
 game_map_init :: proc(path: string, scale: f32) -> (Game_Map, bool) {
-	data, ok := os.read_entire_file(path)
-	if !ok {
+	data, read_err := os.read_entire_file_from_path(path, context.allocator)
+	if read_err != nil {
 		fmt.eprintln("Failed to read map file:", path)
 		return {}, false
 	}

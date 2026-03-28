@@ -93,9 +93,8 @@ save_game :: proc(game: ^Game) -> bool {
 	defer delete(data)
 
 	os.make_directory(SAVE_DIR)
-	if !os.write_entire_file(SAVE_PATH, data) {
-		fmt.eprintln("Failed to write save file")
-		return false
+	if write_err := os.write_entire_file(SAVE_PATH, data); write_err != nil {
+		draw_fatal_error(fmt.tprintf("Could not write save file: %v", write_err))
 	}
 
 	fmt.println("Game saved.")
@@ -103,8 +102,8 @@ save_game :: proc(game: ^Game) -> bool {
 }
 
 save_load :: proc(game: ^Game) -> bool {
-	data, ok := os.read_entire_file(SAVE_PATH)
-	if !ok {
+	data, read_err := os.read_entire_file_from_path(SAVE_PATH, context.allocator)
+	if read_err != nil {
 		fmt.eprintln("No save file found")
 		return false
 	}

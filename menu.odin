@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "core:os"
 import "core:strings"
 import rl "vendor:raylib"
 
@@ -370,10 +371,7 @@ draw_level_up_menu :: proc(app: ^App) {
 	if !ok {return}
 	gd := &game.game_data
 
-	buttons := [2]Menu_Button {
-		{label = "[D]amage+", hotkey = .D},
-		{label = "[P]rojectile+", hotkey = .P},
-	}
+	buttons := [2]Menu_Button{{label = "Damage+"}, {label = "Projectile+"}}
 	def := Menu_Def {
 		label      = "LEVEL UP!",
 		layout     = .Horizontal,
@@ -522,6 +520,30 @@ settings_menu_update :: proc(app: ^App) {
 		app.state = .Main_Menu
 		app.menu_nav = menu_nav_open()
 	}
+}
+
+// draw_fatal_error shows a blocking error dialog using the standard menu
+// renderer, waits for the player to dismiss it, then exits the process.
+draw_fatal_error :: proc(msg: string) {
+	label_buf: [256]byte
+	label := fmt.bprintf(label_buf[:], "Fatal Error\n%s", msg)
+	nav := menu_nav_open()
+	buttons := [1]Menu_Button{{label = "[Enter] Quit", hotkey = .ENTER}}
+	def := Menu_Def {
+		label      = label,
+		layout     = .Vertical,
+		buttons    = buttons[:],
+		item_style = BUTTON_STYLE,
+	}
+	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
+	for !rl.WindowShouldClose() {
+		rl.BeginDrawing()
+		rl.ClearBackground(rl.BLACK)
+		result := draw_menu(def, &nav, center)
+		rl.EndDrawing()
+		if result >= 0 {break}
+	}
+	os.exit(1)
 }
 
 draw_menu_button :: proc(rect: rl.Rectangle, text: cstring, mouse_pos: rl.Vector2) -> bool {

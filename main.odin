@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:math/rand"
+import "core:os"
 import rl "vendor:raylib"
 
 Game :: struct {
@@ -206,6 +207,12 @@ main :: proc() {
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(60)
 	rl.SetExitKey(.KEY_NULL)
+
+	for arg in os.args[1:] {
+		if arg == "--test-write-error" {
+			draw_fatal_error("Simulated write error: permission denied")
+		}
+	}
 
 	app := App {
 		state    = .Main_Menu,
