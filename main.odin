@@ -84,7 +84,11 @@ game_update :: proc(app: ^App) {
 
 	if gd.state == .Quit {
 		rl.EndMode2D()
-		save_game(game)
+		if gd.player.health > 0 {
+			save_game(game)
+		} else {
+			save_delete()
+		}
 		game_deinit(game)
 		app.game = nil
 		app.state = .Main_Menu
@@ -156,6 +160,7 @@ update_enemies :: proc(game: ^Game) {
 		} else {
 			gd.player.score += 1
 			if gd.player.score % 3 == 0 {
+				generate_level_up_options(gd)
 				gd.state = .Level_Up
 				gd.menu_nav = menu_nav_open()
 			}

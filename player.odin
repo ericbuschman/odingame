@@ -5,24 +5,22 @@ import "core:math"
 import rl "vendor:raylib"
 
 Player :: struct {
-	sprite:           rl.Texture2D,
-	attacks:          [dynamic]Attack,
-	name:             string,
-	loc:              rl.Vector2,
-	velocity:         rl.Vector2,
-	damage_level:     i32,
-	proj_count_level: i32,
-	health:           i32,
-	speed:            f32,
-	acceleration:     f32,
-	friction:         f32,
-	scale:            f32,
-	movedir:          Move_Dir,
-	score:            u32,
-	posted_score:     bool,
-	is_dodging:       bool,
-	dodge_timer:      f32,
-	dodge_dir:        rl.Vector2,
+	sprite:       rl.Texture2D,
+	attacks:      [dynamic]Attack,
+	name:         string,
+	loc:          rl.Vector2,
+	velocity:     rl.Vector2,
+	health:       i32,
+	speed:        f32,
+	acceleration: f32,
+	friction:     f32,
+	scale:        f32,
+	movedir:      Move_Dir,
+	score:        u32,
+	posted_score: bool,
+	is_dodging:   bool,
+	dodge_timer:  f32,
+	dodge_dir:    rl.Vector2,
 }
 
 player_init :: proc(sprite: rl.Texture2D) -> Player {
@@ -42,8 +40,6 @@ player_apply_defaults :: proc(p: ^Player) {
 	p.name = "Player"
 	p.loc = {150, 150}
 	p.velocity = {0, 0}
-	p.damage_level = 0
-	p.proj_count_level = 0
 	p.health = 5
 	p.speed = 5.0
 	p.acceleration = 10.0
@@ -262,25 +258,27 @@ player_update :: proc(
 		if attack_tick(&atk) {
 			switch cfg in atk.attack_type {
 			case Melee_Config:
+				reach := cfg.length + f32(atk.upgrades.reach) * REACH_PER_UPGRADE
+				dmg := atk.damage * (1 + atk.upgrades.damage)
 				m := melee_new_with_params(
 					p,
 					target,
-					atk.damage,
+					dmg,
 					cfg.style,
 					cfg.width,
-					cfg.length,
+					reach,
 					cfg.duration,
 					cfg.sweep_radius,
 				)
 				append(&gd.melee_attacks, m)
 
 			case Projectile_Config:
-				count := 1 + int(p.proj_count_level)
-				dmg := atk.damage * (1 + p.damage_level)
+				count := 1 + int(atk.upgrades.projectiles)
+				dmg := atk.damage * (1 + atk.upgrades.damage)
 
 				for i in 0 ..< count {
 					proj := projectile_new(p, target, dmg, cfg.speed)
-					if p.damage_level > 0 {
+					if atk.upgrades.damage > 0 {
 						proj.glow = true
 					}
 

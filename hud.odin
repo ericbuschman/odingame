@@ -17,15 +17,35 @@ draw_hud :: proc(heart_tex: rl.Texture2D, hp: i32, attacks: []Attack, nav: ^Menu
 	if n == 0 {return}
 
 	buttons: [3]Menu_Button
-	buf: [3][64]byte
+	buf: [3][128]byte
 	for i in 0 ..< n {
-		label := fmt.bprintf(
-			buf[i][:],
-			"%s\nDMG %d\nCD %.1fs",
-			attacks[i].name,
-			attacks[i].damage,
-			attacks[i].interval,
-		)
+		atk := &attacks[i]
+		eff_dmg := atk.damage * (1 + atk.upgrades.damage)
+		eff_cd := attack_effective_interval(atk)
+
+		label: string
+		switch cfg in atk.attack_type {
+		case Melee_Config:
+			eff_reach := cfg.length + f32(atk.upgrades.reach) * REACH_PER_UPGRADE
+			label = fmt.bprintf(
+				buf[i][:],
+				"%s\nDMG %d\nReach %.0f\nCD %.1fs",
+				atk.name,
+				eff_dmg,
+				eff_reach,
+				eff_cd,
+			)
+		case Projectile_Config:
+			proj_count := 1 + atk.upgrades.projectiles
+			label = fmt.bprintf(
+				buf[i][:],
+				"%s\nDMG %d\nProj %d\nCD %.1fs",
+				atk.name,
+				eff_dmg,
+				proj_count,
+				eff_cd,
+			)
+		}
 		buttons[i] = Menu_Button {
 			label = label,
 		}
@@ -37,7 +57,7 @@ draw_hud :: proc(heart_tex: rl.Texture2D, hp: i32, attacks: []Attack, nav: ^Menu
 		item_style = CARD_STYLE,
 	}
 
-	card_h: f32 = 120
+	card_h: f32 = 140
 	card_w: f32 = 100
 	margin: f32 = 2
 	sw := f32(rl.GetScreenWidth())

@@ -366,28 +366,98 @@ draw_game_over_menu :: proc(app: ^App) {
 	}
 }
 
+upgrade_type_name :: proc(t: Upgrade_Type) -> string {
+	switch t {
+	case .Damage:
+		return "Damage"
+	case .Projectiles:
+		return "Projectiles"
+	case .Reach:
+		return "Reach"
+	case .Cooldown:
+		return "Cooldown"
+	}
+	return ""
+}
+
 draw_level_up_menu :: proc(app: ^App) {
 	game, ok := &app.game.?
 	if !ok {return}
 	gd := &game.game_data
 
-	buttons := [2]Menu_Button{{label = "Damage+"}, {label = "Projectile+"}}
+	// If no options available (all attacks fully upgraded), resume immediately
+	if gd.level_up_count == 0 {
+		gd.state = .Playing
+		gd.menu_nav = menu_nav_open()
+		return
+	}
+
+	label_bufs: [3][256]byte
+	buttons: [3]Menu_Button
+
+	for i in 0 ..< gd.level_up_count {
+		opt := gd.level_up_options[i]
+		atk := &gd.player.attacks[opt.attack_idx]
+
+		old_buf: [32]byte
+		new_buf: [32]byte
+		old_val: string
+		new_val: string
+
+		switch opt.upgrade_type {
+		case .Damage:
+			old_val = fmt.bprintf(old_buf[:], "%d", atk.damage * (1 + atk.upgrades.damage))
+			new_val = fmt.bprintf(new_buf[:], "%d", atk.damage * (2 + atk.upgrades.damage))
+		case .Projectiles:
+			old_val = fmt.bprintf(old_buf[:], "%d", 1 + atk.upgrades.projectiles)
+			new_val = fmt.bprintf(new_buf[:], "%d", 2 + atk.upgrades.projectiles)
+		case .Reach:
+			if cfg, cfg_ok := atk.attack_type.(Melee_Config); cfg_ok {
+				old_reach := cfg.length + f32(atk.upgrades.reach) * REACH_PER_UPGRADE
+				new_reach := old_reach + REACH_PER_UPGRADE
+				old_val = fmt.bprintf(old_buf[:], "%.0f", old_reach)
+				new_val = fmt.bprintf(new_buf[:], "%.0f", new_reach)
+			}
+		case .Cooldown:
+			old_cd := attack_effective_interval(atk)
+			new_cd := max(MIN_INTERVAL, old_cd - COOLDOWN_REDUCTION_PER_UPGRADE)
+			old_val = fmt.bprintf(old_buf[:], "%.1fs", old_cd)
+			new_val = fmt.bprintf(new_buf[:], "%.1fs", new_cd)
+		}
+
+		label := fmt.bprintf(
+			label_bufs[i][:],
+			"%s\n%s\n%s -> %s",
+			atk.name,
+			upgrade_type_name(opt.upgrade_type),
+			old_val,
+			new_val,
+		)
+		buttons[i] = Menu_Button{label = label}
+	}
+
 	def := Menu_Def {
 		label      = "LEVEL UP!",
 		layout     = .Horizontal,
-		buttons    = buttons[:],
+		buttons    = buttons[:gd.level_up_count],
 		item_style = CARD_STYLE,
 	}
 	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
 	result := draw_menu(def, &gd.menu_nav, center, CARD_W, CARD_H)
 
-	switch result {
-	case 0:
-		gd.player.damage_level += 1
-		gd.state = .Playing
-		gd.menu_nav = menu_nav_open()
-	case 1:
-		gd.player.proj_count_level += 1
+	if result >= 0 && result < gd.level_up_count {
+		opt := gd.level_up_options[result]
+		atk := &gd.player.attacks[opt.attack_idx]
+		switch opt.upgrade_type {
+		case .Damage:
+			atk.upgrades.damage += 1
+		case .Projectiles:
+			atk.upgrades.projectiles += 1
+		case .Reach:
+			atk.upgrades.reach += 1
+		case .Cooldown:
+			atk.upgrades.cooldown += 1
+		}
 		gd.state = .Playing
 		gd.menu_nav = menu_nav_open()
 	}

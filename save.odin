@@ -7,14 +7,21 @@ import "core:os"
 SAVE_DIR :: "saves"
 SAVE_PATH :: "saves/save.json"
 
+Attack_Upgrades_Save :: struct {
+	damage:      i32 `json:"damage"`,
+	projectiles: i32 `json:"projectiles"`,
+	reach:       i32 `json:"reach"`,
+	cooldown:    i32 `json:"cooldown"`,
+}
+
 Player_Save :: struct {
-	loc_x:            f32 `json:"loc_x"`,
-	loc_y:            f32 `json:"loc_y"`,
-	health:           i32 `json:"health"`,
-	speed:            f32 `json:"speed"`,
-	score:            u32 `json:"score"`,
-	damage_level:     i32 `json:"damage_level"`,
-	proj_count_level: i32 `json:"proj_count_level"`,
+	loc_x:           f32                    `json:"loc_x"`,
+	loc_y:           f32                    `json:"loc_y"`,
+	health:          i32                    `json:"health"`,
+	speed:           f32                    `json:"speed"`,
+	score:           u32                    `json:"score"`,
+	attack_upgrades: []Attack_Upgrades_Save `json:"attack_upgrades"`,
+	is_dead:         bool                   `json:"is_dead"`,
 }
 
 Spawner_Save :: struct {
@@ -71,15 +78,26 @@ save_game :: proc(game: ^Game) -> bool {
 		enemy_saves[i] = es
 	}
 
+	attack_upgrade_saves := make([]Attack_Upgrades_Save, len(p.attacks))
+	defer delete(attack_upgrade_saves)
+	for atk, i in p.attacks {
+		attack_upgrade_saves[i] = Attack_Upgrades_Save {
+			damage      = atk.upgrades.damage,
+			projectiles = atk.upgrades.projectiles,
+			reach       = atk.upgrades.reach,
+			cooldown    = atk.upgrades.cooldown,
+		}
+	}
+
 	sf := Save_File {
 		player = Player_Save {
-			loc_x            = p.loc.x,
-			loc_y            = p.loc.y,
-			health            = p.health,
-			speed             = p.speed,
-			score             = p.score,
-			damage_level      = p.damage_level,
-			proj_count_level  = p.proj_count_level,
+			loc_x           = p.loc.x,
+			loc_y           = p.loc.y,
+			health          = p.health,
+			speed           = p.speed,
+			score           = p.score,
+			attack_upgrades = attack_upgrade_saves,
+			is_dead         = p.health <= 0,
 		},
 		spawner = Spawner_Save{enemy_id = s.enemy_id, enemy1_timer = s.enemy1_timer},
 		enemies = enemy_saves,
@@ -116,6 +134,13 @@ save_load :: proc(game: ^Game) -> bool {
 		return false
 	}
 	defer delete(sf.enemies)
+	defer delete(sf.player.attack_upgrades)
+
+	if sf.player.is_dead {
+		fmt.eprintln("Save file contains a dead character — deleting")
+		save_delete()
+		return false
+	}
 
 	gd := &game.game_data
 
@@ -152,13 +177,19 @@ save_load :: proc(game: ^Game) -> bool {
 	// Reset attacks to defaults first, then apply saved upgrade levels
 	player_apply_defaults(p)
 
-	p.loc.x            = sf.player.loc_x
-	p.loc.y            = sf.player.loc_y
-	p.health           = sf.player.health
-	p.speed            = sf.player.speed
-	p.score            = sf.player.score
-	p.damage_level     = sf.player.damage_level
-	p.proj_count_level = sf.player.proj_count_level
+	p.loc.x  = sf.player.loc_x
+	p.loc.y  = sf.player.loc_y
+	p.health = sf.player.health
+	p.speed  = sf.player.speed
+	p.score  = sf.player.score
+
+	for i in 0 ..< min(len(sf.player.attack_upgrades), len(p.attacks)) {
+		saved := sf.player.attack_upgrades[i]
+		p.attacks[i].upgrades.damage      = saved.damage
+		p.attacks[i].upgrades.projectiles = saved.projectiles
+		p.attacks[i].upgrades.reach       = saved.reach
+		p.attacks[i].upgrades.cooldown    = saved.cooldown
+	}
 
 	game.spawner.enemy_id     = sf.spawner.enemy_id
 	game.spawner.enemy1_timer = sf.spawner.enemy1_timer

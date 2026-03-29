@@ -1,6 +1,12 @@
 package main
 
+import "core:math/rand"
 import rl "vendor:raylib"
+
+Level_Up_Option :: struct {
+	attack_idx:   int,
+	upgrade_type: Upgrade_Type,
+}
 
 Game_Data :: struct {
 	time_accumulator: f64,
@@ -18,6 +24,8 @@ Game_Data :: struct {
 	spawn_requests:   [dynamic]Spawn_Request,
 	menu_nav:         Menu_Nav,
 	attack_nav:       Menu_Nav,
+	level_up_options: [3]Level_Up_Option,
+	level_up_count:   int,
 }
 
 game_data_init :: proc() -> Game_Data {
@@ -79,4 +87,35 @@ is_in_bounds :: proc(pos: rl.Vector2, bounds: rl.Rectangle) -> bool {
 		pos.y > bounds.y &&
 		pos.y < bounds.y + bounds.height \
 	)
+}
+
+generate_level_up_options :: proc(gd: ^Game_Data) {
+	pool: [dynamic]Level_Up_Option
+	defer delete(pool)
+
+	for i in 0 ..< len(gd.player.attacks) {
+		atk := &gd.player.attacks[i]
+		if attack_total_upgrades(atk) >= MAX_UPGRADES_PER_ATTACK {continue}
+
+		append(&pool, Level_Up_Option{attack_idx = i, upgrade_type = .Damage})
+		append(&pool, Level_Up_Option{attack_idx = i, upgrade_type = .Cooldown})
+
+		switch _ in atk.attack_type {
+		case Projectile_Config:
+			append(&pool, Level_Up_Option{attack_idx = i, upgrade_type = .Projectiles})
+		case Melee_Config:
+			append(&pool, Level_Up_Option{attack_idx = i, upgrade_type = .Reach})
+		}
+	}
+
+	// Fisher-Yates shuffle
+	for i := len(pool) - 1; i > 0; i -= 1 {
+		j := int(rand.float32() * f32(i + 1))
+		pool[i], pool[j] = pool[j], pool[i]
+	}
+
+	gd.level_up_count = min(3, len(pool))
+	for i in 0 ..< gd.level_up_count {
+		gd.level_up_options[i] = pool[i]
+	}
 }
