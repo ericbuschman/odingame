@@ -36,7 +36,7 @@ draw_hud :: proc(
 			label = fmt.bprintf(
 				buf[i][:],
 				"[%d] %s\nDMG %d\nReach %.0f\nCD %.1fs",
-				i,
+				i + 1,
 				atk.name,
 				eff_dmg,
 				eff_reach,
@@ -47,7 +47,7 @@ draw_hud :: proc(
 			label = fmt.bprintf(
 				buf[i][:],
 				"[%d] %s\nDMG %d\nProj %d\nCD %.1fs",
-				i,
+				i + 1,
 				atk.name,
 				eff_dmg,
 				proj_count,
@@ -55,8 +55,8 @@ draw_hud :: proc(
 			)
 		}
 		buttons[i] = Menu_Button {
-			label  = label,
-			hotkey = rl.KeyboardKey(i + 48),
+			label   = label,
+			hotkeys = {rl.KeyboardKey(i + 49), nil},
 		}
 	}
 

@@ -41,9 +41,14 @@ CARD_STYLE :: Menu_Item_Style {
 	glow_pad  = 6,
 }
 
+Menu_Hotkey :: union {
+	rl.KeyboardKey,
+	rl.MouseButton,
+}
+
 Menu_Button :: struct {
 	label:    string,
-	hotkey:   rl.KeyboardKey, // .KEY_NULL = no hotkey
+	hotkeys:  [2]Menu_Hotkey, // up to 2; nil element = unused
 	disabled: bool,
 }
 
@@ -157,7 +162,12 @@ prev_enabled :: proc(buttons: []Menu_Button, current, n: int) -> int {
 // draw_menu — generalized menu engine
 // ---------------------------------------------------------------------------
 
-draw_menu :: proc(def: Menu_Def, nav: ^Menu_Nav, screen_center: rl.Vector2, item_w, item_h: f32) -> int {
+draw_menu :: proc(
+	def: Menu_Def,
+	nav: ^Menu_Nav,
+	screen_center: rl.Vector2,
+	item_w, item_h: f32,
+) -> int {
 	n := len(def.buttons)
 	if n == 0 {return -1}
 
@@ -191,6 +201,21 @@ draw_menu :: proc(def: Menu_Def, nav: ^Menu_Nav, screen_center: rl.Vector2, item
 	first_frame := nav.just_opened
 	if first_frame {
 		nav.just_opened = false
+	}
+
+	// Mouse wheel navigation — scroll up = prev, scroll down = next.
+	// Accumulate scroll so one gesture always produces exactly one step.
+	// Skipped on first frame.
+	if !first_frame {
+		wheel := rl.GetMouseWheelMove()
+		if wheel >= 1 {
+			nav.selected = prev_enabled(def.buttons, nav.selected, n)
+			return nav.selected
+		} else if wheel <= -1 {
+			nav.selected = next_enabled(def.buttons, nav.selected, n)
+			return nav.selected
+		}
+
 	}
 
 	// Arrow-key navigation (arrow keys only — avoids W/A/S/D conflicts).
@@ -281,8 +306,13 @@ draw_menu :: proc(def: Menu_Def, nav: ^Menu_Nav, screen_center: rl.Vector2, item
 	for i in 0 ..< n {
 		btn := def.buttons[i]
 		if btn.disabled {continue}
-		if btn.hotkey != .KEY_NULL && rl.IsKeyPressed(btn.hotkey) {
-			return i
+		for hk in btn.hotkeys {
+			switch k in hk {
+			case rl.KeyboardKey:
+				if k != .KEY_NULL && rl.IsKeyPressed(k) {return i}
+			case rl.MouseButton:
+				if rl.IsMouseButtonPressed(k) {return i}
+			}
 		}
 	}
 	if nav.selected >= 0 && nav.selected < n {
@@ -312,8 +342,8 @@ draw_pause_menu :: proc(app: ^App) {
 	gd := &game.game_data
 
 	buttons := [2]Menu_Button {
-		{label = "[Esc] Resume", hotkey = .KEY_NULL}, // Esc toggle handled by process_game_state
-		{label = "[Q]uit", hotkey = .Q},
+		{label = "[Esc] Resume"}, // Esc toggle handled by process_game_state
+		{label = "[Q]uit", hotkeys = {rl.KeyboardKey.Q, nil}},
 	}
 	def := Menu_Def {
 		label      = "Game Paused",
@@ -343,8 +373,8 @@ draw_game_over_menu :: proc(app: ^App) {
 	label := fmt.bprintf(label_buf[:], "Game Over\nScore: %d", gd.player.score)
 
 	buttons := [2]Menu_Button {
-		{label = "[R]eplay", hotkey = .R},
-		{label = "[Q]uit to Menu", hotkey = .Q},
+		{label = "[R]eplay", hotkeys = {rl.KeyboardKey.R, nil}},
+		{label = "[Q]uit to Menu", hotkeys = {rl.KeyboardKey.Q, nil}},
 	}
 	def := Menu_Def {
 		label      = label,
@@ -433,7 +463,9 @@ draw_level_up_menu :: proc(app: ^App) {
 			old_val,
 			new_val,
 		)
-		buttons[i] = Menu_Button{label = label}
+		buttons[i] = Menu_Button {
+			label = label,
+		}
 	}
 
 	def := Menu_Def {
@@ -471,10 +503,10 @@ main_menu_update :: proc(app: ^App) {
 	has_save := save_exists()
 
 	buttons := [4]Menu_Button {
-		{label = "[N]ew Game", hotkey = .N},
-		{label = "[L]oad Game", hotkey = .L, disabled = !has_save},
-		{label = "[S]ettings", hotkey = .S},
-		{label = "[Q]uit", hotkey = .Q},
+		{label = "[N]ew Game", hotkeys = {rl.KeyboardKey.N, nil}},
+		{label = "[L]oad Game", hotkeys = {rl.KeyboardKey.L, nil}, disabled = !has_save},
+		{label = "[S]ettings", hotkeys = {rl.KeyboardKey.S, nil}},
+		{label = "[Q]uit", hotkeys = {rl.KeyboardKey.Q, nil}},
 	}
 	def := Menu_Def {
 		label      = "OdinGame",
@@ -598,7 +630,7 @@ draw_fatal_error :: proc(msg: string) {
 	label_buf: [256]byte
 	label := fmt.bprintf(label_buf[:], "Fatal Error\n%s", msg)
 	nav := menu_nav_open()
-	buttons := [1]Menu_Button{{label = "[Enter] Quit", hotkey = .ENTER}}
+	buttons := [1]Menu_Button{{label = "[Enter] Quit", hotkeys = {rl.KeyboardKey.ENTER, nil}}}
 	def := Menu_Def {
 		label      = label,
 		layout     = .Vertical,
