@@ -3,8 +3,14 @@ package main
 import "core:fmt"
 import rl "vendor:raylib"
 
-draw_hud :: proc(heart_tex: rl.Texture2D, hp: i32, attacks: []Attack, nav: ^Menu_Nav) {
-	if hp <= 0 {return}
+draw_hud :: proc(
+	heart_tex: rl.Texture2D,
+	hp: i32,
+	attacks: []Attack,
+	nav: ^Menu_Nav,
+	selected_attack: int,
+) -> int {
+	if hp <= 0 {return selected_attack}
 
 	// Hearts — plain screen coords, no camera needed
 	for i in 0 ..< hp {
@@ -14,7 +20,7 @@ draw_hud :: proc(heart_tex: rl.Texture2D, hp: i32, attacks: []Attack, nav: ^Menu
 
 	// Attack cards — reuse draw_menu so styling/interaction is centralized
 	n := min(len(attacks), 3)
-	if n == 0 {return}
+	if n == 0 {return selected_attack}
 
 	buttons: [3]Menu_Button
 	buf: [3][128]byte
@@ -29,7 +35,8 @@ draw_hud :: proc(heart_tex: rl.Texture2D, hp: i32, attacks: []Attack, nav: ^Menu
 			eff_reach := cfg.length + f32(atk.upgrades.reach) * REACH_PER_UPGRADE
 			label = fmt.bprintf(
 				buf[i][:],
-				"%s\nDMG %d\nReach %.0f\nCD %.1fs",
+				"[%d] %s\nDMG %d\nReach %.0f\nCD %.1fs",
+				i,
 				atk.name,
 				eff_dmg,
 				eff_reach,
@@ -39,7 +46,8 @@ draw_hud :: proc(heart_tex: rl.Texture2D, hp: i32, attacks: []Attack, nav: ^Menu
 			proj_count := 1 + atk.upgrades.projectiles
 			label = fmt.bprintf(
 				buf[i][:],
-				"%s\nDMG %d\nProj %d\nCD %.1fs",
+				"[%d] %s\nDMG %d\nProj %d\nCD %.1fs",
+				i,
 				atk.name,
 				eff_dmg,
 				proj_count,
@@ -47,7 +55,8 @@ draw_hud :: proc(heart_tex: rl.Texture2D, hp: i32, attacks: []Attack, nav: ^Menu
 			)
 		}
 		buttons[i] = Menu_Button {
-			label = label,
+			label  = label,
+			hotkey = rl.KeyboardKey(i + 48),
 		}
 	}
 
@@ -63,5 +72,12 @@ draw_hud :: proc(heart_tex: rl.Texture2D, hp: i32, attacks: []Attack, nav: ^Menu
 	sw := f32(rl.GetScreenWidth())
 	sh := f32(rl.GetScreenHeight())
 	center := rl.Vector2{sw / 2, sh - card_h / 2 - margin}
-	draw_menu(def, nav, center, card_w, card_h)
+	attack_selector := draw_menu(def, nav, center, card_w, card_h)
+	if attack_selector >= 0 {
+		fmt.printfln("Attack selected: %d", attack_selector)
+	}
+	if attack_selector >= 0 && attack_selector != selected_attack {
+		return attack_selector
+	}
+	return selected_attack
 }

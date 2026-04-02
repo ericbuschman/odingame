@@ -121,7 +121,14 @@ game_update :: proc(app: ^App) {
 	// --- End world-space rendering ---
 
 	// --- Screen-space overlay rendering ---
-	draw_hud(gd.heart_tex, gd.player.health, gd.player.attacks[:], &gd.attack_nav)
+	gd.attack_nav.selected = gd.player.selected_attack
+	gd.player.selected_attack = draw_hud(
+		gd.heart_tex,
+		gd.player.health,
+		gd.player.attacks[:],
+		&gd.attack_nav,
+		gd.player.selected_attack,
+	)
 	switch gd.state {
 	case .Paused:
 		draw_pause_menu(app)
@@ -244,8 +251,8 @@ main :: proc() {
 	}
 
 	// Cleanup
-	if g, ok := &app.game.?; ok {
-		game_deinit(g)
+	if t, ok := app.game.?; ok {
+		game_deinit(&t)
 	}
 	settings_save(app.settings)
 }

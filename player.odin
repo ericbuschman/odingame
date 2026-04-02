@@ -1,32 +1,33 @@
 package main
 
-import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
 Player :: struct {
-	sprite:       rl.Texture2D,
-	attacks:      [dynamic]Attack,
-	name:         string,
-	loc:          rl.Vector2,
-	velocity:     rl.Vector2,
-	health:       i32,
-	speed:        f32,
-	acceleration: f32,
-	friction:     f32,
-	scale:        f32,
-	movedir:      Move_Dir,
-	score:        u32,
-	posted_score: bool,
-	is_dodging:   bool,
-	dodge_timer:  f32,
-	dodge_dir:    rl.Vector2,
+	sprite:          rl.Texture2D,
+	attacks:         [dynamic]Attack,
+	selected_attack: int,
+	name:            string,
+	loc:             rl.Vector2,
+	velocity:        rl.Vector2,
+	health:          i32,
+	speed:           f32,
+	acceleration:    f32,
+	friction:        f32,
+	scale:           f32,
+	movedir:         Move_Dir,
+	score:           u32,
+	posted_score:    bool,
+	is_dodging:      bool,
+	dodge_timer:     f32,
+	dodge_dir:       rl.Vector2,
 }
 
 player_init :: proc(sprite: rl.Texture2D) -> Player {
 	p := Player {
-		sprite  = sprite,
-		attacks = make([dynamic]Attack, 0, 10),
+		sprite          = sprite,
+		attacks         = make([dynamic]Attack, 0, 10),
+		selected_attack = 0,
 	}
 	player_apply_defaults(&p)
 	return p
@@ -37,6 +38,7 @@ player_deinit :: proc(p: ^Player) {
 }
 
 player_apply_defaults :: proc(p: ^Player) {
+	p.selected_attack = 0
 	p.name = "Player"
 	p.loc = {150, 150}
 	p.velocity = {0, 0}
@@ -254,8 +256,9 @@ player_update :: proc(
 ) {
 	player_movement(p, gd, obstacles, bounds)
 
-	for &atk in p.attacks {
-		if attack_tick(&atk) {
+	if p.selected_attack < len(p.attacks) {
+		atk := &p.attacks[p.selected_attack]
+		if attack_tick(atk) {
 			switch cfg in atk.attack_type {
 			case Melee_Config:
 				reach := cfg.length + f32(atk.upgrades.reach) * REACH_PER_UPGRADE
