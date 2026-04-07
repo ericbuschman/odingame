@@ -173,7 +173,7 @@ update_enemies :: proc(game: ^Game) {
 			}
 			enemy_deinit(enemy)
 			unordered_remove(&gd.enemies, i)
-			fmt.printf("Enemy removed, array count: %d\n", len(gd.enemies))
+			// fmt.printf("Enemy removed, array count: %d\n", len(gd.enemies))
 		}
 	}
 }
@@ -215,6 +215,7 @@ update_melee_attacks :: proc(game: ^Game) {
 }
 
 main :: proc() {
+	rl.SetTraceLogLevel(.WARNING)
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "OdinGame")
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(60)

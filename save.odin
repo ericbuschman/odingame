@@ -115,7 +115,7 @@ save_game :: proc(game: ^Game) -> bool {
 		draw_fatal_error(fmt.tprintf("Could not write save file: %v", write_err))
 	}
 
-	fmt.println("Game saved.")
+	// fmt.println("Game saved.")
 	return true
 }
 
@@ -194,7 +194,7 @@ save_load :: proc(game: ^Game) -> bool {
 	game.spawner.enemy_id     = sf.spawner.enemy_id
 	game.spawner.enemy1_timer = sf.spawner.enemy1_timer
 
-	fmt.println("Game loaded.")
+	// fmt.println("Game loaded.")
 	return true
 }
 

@@ -81,9 +81,9 @@ draw_hud :: proc(
 	sh := f32(rl.GetScreenHeight())
 	center := rl.Vector2{sw / 2, sh - CARD_STYLE.item_h / 2 - margin}
 	attack_selector := draw_menu(def, nav, center)
-	if attack_selector >= 0 {
-		fmt.printfln("Attack selected: %d", attack_selector)
-	}
+	// if attack_selector >= 0 {
+	// 	fmt.printfln("Attack selected: %d", attack_selector)
+	// }
 	if attack_selector >= 0 && &attacks[attack_selector] != selected_attack {
 		return &attacks[attack_selector]
 	}

@@ -1,2 +1,6 @@
 saves/save.json
 settings.json
+
+# Odin build artifacts
+odingame
+*.o

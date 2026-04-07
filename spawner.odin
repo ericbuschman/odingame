@@ -62,12 +62,12 @@ spawn_enemies :: proc(game: ^Game) {
 			make_attack("PewPew", Projectile_Config{speed = 500, radius = 3}, 1, 1.5),
 		)
 		spawner.enemy1_timer = get_rand(1, 2.5)
-		fmt.printf(
-			"Enemy%d spawned at (%.0f, %.0f)\n",
-			spawner.enemy_id,
-			new_enemy.loc.x,
-			new_enemy.loc.y,
-		)
+		// fmt.printf(
+		// 	"Enemy%d spawned at (%.0f, %.0f)\n",
+		// 	spawner.enemy_id,
+		// 	new_enemy.loc.x,
+		// 	new_enemy.loc.y,
+		// )
 		append(&gd.enemies, new_enemy)
 	}
 }
