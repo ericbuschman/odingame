@@ -10,8 +10,24 @@ import rl "vendor:raylib"
 // Menu system types
 // ---------------------------------------------------------------------------
 
-Menu_Item_Style :: struct {
+// Gates which input channels are active for a given menu.
+Menu_Input_Flag :: enum {
+	Mouse_Click,
+	Mouse_Scroll,
+	Keyboard,
+}
+Menu_Interaction :: bit_set[Menu_Input_Flag]
+
+MENU_INTERACT_ALL        :: Menu_Interaction{.Mouse_Click, .Mouse_Scroll, .Keyboard}
+MENU_INTERACT_NO_SCROLL  :: Menu_Interaction{.Mouse_Click, .Keyboard}
+MENU_INTERACT_NO_MOUSE   :: Menu_Interaction{.Keyboard}
+MENU_INTERACT_SCROLL_KBD :: Menu_Interaction{.Mouse_Scroll, .Keyboard}
+
+// Visual style and sizing for menu items. Button vs card is just a style preset.
+Menu_Style :: struct {
 	font_size: i32,
+	item_w:    f32,
+	item_h:    f32,
 	bg:        rl.Color,
 	border:    rl.Color,
 	border_hl: rl.Color, // hovered / keyboard-selected
@@ -19,10 +35,10 @@ Menu_Item_Style :: struct {
 	glow_pad:  f32,
 }
 
-BUTTON_W :: f32(250)
-BUTTON_H :: f32(50)
-BUTTON_STYLE :: Menu_Item_Style {
+BUTTON_STYLE :: Menu_Style {
 	font_size = 24,
+	item_w    = 250,
+	item_h    = 50,
 	bg        = rl.DARKGRAY,
 	border    = rl.WHITE,
 	border_hl = rl.SKYBLUE,
@@ -30,10 +46,10 @@ BUTTON_STYLE :: Menu_Item_Style {
 	glow_pad  = 4,
 }
 
-CARD_W :: f32(180)
-CARD_H :: f32(200)
-CARD_STYLE :: Menu_Item_Style {
+CARD_STYLE :: Menu_Style {
 	font_size = 20,
+	item_w    = 180,
+	item_h    = 200,
 	bg        = rl.DARKGRAY,
 	border    = rl.WHITE,
 	border_hl = rl.SKYBLUE,
@@ -46,7 +62,8 @@ Menu_Hotkey :: union {
 	rl.MouseButton,
 }
 
-Menu_Button :: struct {
+// A single selectable element — covers both button and card use cases.
+Menu_Item :: struct {
 	label:    string,
 	hotkeys:  [2]Menu_Hotkey, // up to 2; nil element = unused
 	disabled: bool,
@@ -58,10 +75,11 @@ Menu_Layout :: enum {
 }
 
 Menu_Def :: struct {
-	label:      string, // header; \n supported; "" = no header
-	layout:     Menu_Layout,
-	buttons:    []Menu_Button, // stack-allocated slice from caller
-	item_style: Menu_Item_Style,
+	label:       string, // header; \n supported; "" = no header
+	layout:      Menu_Layout,
+	items:       []Menu_Item, // stack-allocated slice from caller
+	style:       Menu_Style,
+	interaction: Menu_Interaction,
 }
 
 Menu_Nav :: struct {
@@ -142,18 +160,18 @@ draw_item_text :: proc(rect: rl.Rectangle, text: string, font_size: i32, color: 
 	}
 }
 
-next_enabled :: proc(buttons: []Menu_Button, current, n: int) -> int {
+next_enabled :: proc(items: []Menu_Item, current, n: int) -> int {
 	for i in 1 ..< n {
 		idx := (current + i) % n
-		if !buttons[idx].disabled {return idx}
+		if !items[idx].disabled {return idx}
 	}
 	return current
 }
 
-prev_enabled :: proc(buttons: []Menu_Button, current, n: int) -> int {
+prev_enabled :: proc(items: []Menu_Item, current, n: int) -> int {
 	for i in 1 ..< n {
 		idx := (current - i + n) % n
-		if !buttons[idx].disabled {return idx}
+		if !items[idx].disabled {return idx}
 	}
 	return current
 }
@@ -162,14 +180,12 @@ prev_enabled :: proc(buttons: []Menu_Button, current, n: int) -> int {
 // draw_menu — generalized menu engine
 // ---------------------------------------------------------------------------
 
-draw_menu :: proc(
-	def: Menu_Def,
-	nav: ^Menu_Nav,
-	screen_center: rl.Vector2,
-	item_w, item_h: f32,
-) -> int {
-	n := len(def.buttons)
+draw_menu :: proc(def: Menu_Def, nav: ^Menu_Nav, screen_center: rl.Vector2) -> int {
+	n := len(def.items)
 	if n == 0 {return -1}
+
+	item_w := def.style.item_w
+	item_h := def.style.item_h
 
 	// Grid dimensions
 	num_cols := 1
@@ -206,51 +222,53 @@ draw_menu :: proc(
 	// Mouse wheel navigation — scroll up = prev, scroll down = next.
 	// Accumulate scroll so one gesture always produces exactly one step.
 	// Skipped on first frame.
-	if !first_frame {
+	if .Mouse_Scroll in def.interaction && !first_frame {
 		wheel := rl.GetMouseWheelMove()
 		if wheel >= 1 {
-			nav.selected = prev_enabled(def.buttons, nav.selected, n)
+			nav.selected = prev_enabled(def.items, nav.selected, n)
 			return nav.selected
 		} else if wheel <= -1 {
-			nav.selected = next_enabled(def.buttons, nav.selected, n)
+			nav.selected = next_enabled(def.items, nav.selected, n)
 			return nav.selected
 		}
-
 	}
 
 	// Arrow-key navigation (arrow keys only — avoids W/A/S/D conflicts).
 	// Skipped on first frame.
-	if !first_frame {
+	if .Keyboard in def.interaction && !first_frame {
 		if def.layout == .Vertical {
 			if rl.IsKeyPressed(.UP) {
-				nav.selected = prev_enabled(def.buttons, nav.selected, n)
+				nav.selected = prev_enabled(def.items, nav.selected, n)
 			}
 			if rl.IsKeyPressed(.DOWN) {
-				nav.selected = next_enabled(def.buttons, nav.selected, n)
+				nav.selected = next_enabled(def.items, nav.selected, n)
 			}
 		} else {
 			if rl.IsKeyPressed(.LEFT) {
-				nav.selected = prev_enabled(def.buttons, nav.selected, n)
+				nav.selected = prev_enabled(def.items, nav.selected, n)
 			}
 			if rl.IsKeyPressed(.RIGHT) {
-				nav.selected = next_enabled(def.buttons, nav.selected, n)
+				nav.selected = next_enabled(def.items, nav.selected, n)
 			}
 			if rl.IsKeyPressed(.UP) {
 				candidate := nav.selected - num_cols
-				if candidate >= 0 && !def.buttons[candidate].disabled {
+				if candidate >= 0 && !def.items[candidate].disabled {
 					nav.selected = candidate
 				}
 			}
 			if rl.IsKeyPressed(.DOWN) {
 				candidate := nav.selected + num_cols
-				if candidate < n && !def.buttons[candidate].disabled {
+				if candidate < n && !def.items[candidate].disabled {
 					nav.selected = candidate
 				}
 			}
 		}
 	}
 
-	mouse := rl.GetMousePosition()
+	mouse: rl.Vector2
+	if .Mouse_Click in def.interaction {
+		mouse = rl.GetMousePosition()
+	}
 
 	// Draw items
 	rects: [32]rl.Rectangle
@@ -264,68 +282,74 @@ draw_menu :: proc(
 			height = item_h,
 		}
 
-		btn := def.buttons[i]
+		item := def.items[i]
 		rect := rects[i]
 
-		hovered := !btn.disabled && rl.CheckCollisionPointRec(mouse, rect)
+		hovered :=
+			.Mouse_Click in def.interaction &&
+			!item.disabled &&
+			rl.CheckCollisionPointRec(mouse, rect)
 		if hovered {
 			nav.selected = i
 		}
-		is_selected := !btn.disabled && nav.selected == i
+		is_selected := !item.disabled && nav.selected == i
 
 		if hovered || is_selected {
 			t := f32(rl.GetTime())
 			osc := (math.sin(t * 5) + 1) / 2
 			alpha := f32(0.3 + osc * 0.4)
-			gp := def.item_style.glow_pad
+			gp := def.style.glow_pad
 			glow_rect := rl.Rectangle {
 				x      = rect.x - gp,
 				y      = rect.y - gp,
 				width  = rect.width + gp * 2,
 				height = rect.height + gp * 2,
 			}
-			rl.DrawRectangleRec(glow_rect, rl.Fade(def.item_style.glow, alpha))
+			rl.DrawRectangleRec(glow_rect, rl.Fade(def.style.glow, alpha))
 		}
 
-		bg := def.item_style.bg
-		if btn.disabled {bg = rl.Fade(bg, 0.4)}
+		bg := def.style.bg
+		if item.disabled {bg = rl.Fade(bg, 0.4)}
 		rl.DrawRectangleRec(rect, bg)
 
-		border := def.item_style.border_hl if (hovered || is_selected) else def.item_style.border
-		if btn.disabled {border = rl.Fade(border, 0.3)}
+		border := def.style.border_hl if (hovered || is_selected) else def.style.border
+		if item.disabled {border = rl.Fade(border, 0.3)}
 		rl.DrawRectangleLinesEx(rect, 2, border)
 
-		text_color := rl.WHITE if !btn.disabled else rl.Fade(rl.WHITE, 0.35)
-		draw_item_text(rect, btn.label, def.item_style.font_size, text_color)
+		text_color := rl.WHITE if !item.disabled else rl.Fade(rl.WHITE, 0.35)
+		draw_item_text(rect, item.label, def.style.font_size, text_color)
 	}
 
 	// No activation on the first frame shown.
 	if first_frame {return -1}
 
-	// Activation: hotkeys, then Enter on keyboard selection, then mouse click.
+	// Activation: hotkeys (keyboard gated by .Keyboard, mouse button gated by
+	// .Mouse_Click), then Enter on keyboard selection, then mouse click.
 	for i in 0 ..< n {
-		btn := def.buttons[i]
-		if btn.disabled {continue}
-		for hk in btn.hotkeys {
+		item := def.items[i]
+		if item.disabled {continue}
+		for hk in item.hotkeys {
 			switch k in hk {
 			case rl.KeyboardKey:
-				if k != .KEY_NULL && rl.IsKeyPressed(k) {return i}
+				if .Keyboard in def.interaction && k != .KEY_NULL && rl.IsKeyPressed(k) {return i}
 			case rl.MouseButton:
-				if rl.IsMouseButtonPressed(k) {return i}
+				if .Mouse_Click in def.interaction && rl.IsMouseButtonPressed(k) {return i}
 			}
 		}
 	}
-	if nav.selected >= 0 && nav.selected < n {
-		btn := def.buttons[nav.selected]
-		if !btn.disabled && rl.IsKeyPressed(.ENTER) {
+	if .Keyboard in def.interaction && nav.selected >= 0 && nav.selected < n {
+		item := def.items[nav.selected]
+		if !item.disabled && rl.IsKeyPressed(.ENTER) {
 			return nav.selected
 		}
 	}
-	for i in 0 ..< n {
-		btn := def.buttons[i]
-		if btn.disabled {continue}
-		if rl.CheckCollisionPointRec(mouse, rects[i]) && rl.IsMouseButtonPressed(.LEFT) {
-			return i
+	if .Mouse_Click in def.interaction {
+		for i in 0 ..< n {
+			item := def.items[i]
+			if item.disabled {continue}
+			if rl.CheckCollisionPointRec(mouse, rects[i]) && rl.IsMouseButtonPressed(.LEFT) {
+				return i
+			}
 		}
 	}
 
@@ -341,18 +365,19 @@ draw_pause_menu :: proc(app: ^App) {
 	if !ok {return}
 	gd := &game.game_data
 
-	buttons := [2]Menu_Button {
+	items := [2]Menu_Item {
 		{label = "[Esc] Resume"}, // Esc toggle handled by process_game_state
 		{label = "[Q]uit", hotkeys = {rl.KeyboardKey.Q, nil}},
 	}
 	def := Menu_Def {
-		label      = "Game Paused",
-		layout     = .Vertical,
-		buttons    = buttons[:],
-		item_style = BUTTON_STYLE,
+		label       = "Game Paused",
+		layout      = .Vertical,
+		items       = items[:],
+		style       = BUTTON_STYLE,
+		interaction = MENU_INTERACT_NO_SCROLL,
 	}
 	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
-	result := draw_menu(def, &gd.menu_nav, center, BUTTON_W, BUTTON_H)
+	result := draw_menu(def, &gd.menu_nav, center)
 
 	switch result {
 	case 0:
@@ -372,18 +397,19 @@ draw_game_over_menu :: proc(app: ^App) {
 	label_buf: [64]byte
 	label := fmt.bprintf(label_buf[:], "Game Over\nScore: %d", gd.player.score)
 
-	buttons := [2]Menu_Button {
+	items := [2]Menu_Item {
 		{label = "[R]eplay", hotkeys = {rl.KeyboardKey.R, nil}},
 		{label = "[Q]uit to Menu", hotkeys = {rl.KeyboardKey.Q, nil}},
 	}
 	def := Menu_Def {
-		label      = label,
-		layout     = .Vertical,
-		buttons    = buttons[:],
-		item_style = BUTTON_STYLE,
+		label       = label,
+		layout      = .Vertical,
+		items       = items[:],
+		style       = BUTTON_STYLE,
+		interaction = MENU_INTERACT_NO_SCROLL,
 	}
 	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
-	result := draw_menu(def, &gd.menu_nav, center, BUTTON_W, BUTTON_H)
+	result := draw_menu(def, &gd.menu_nav, center)
 
 	switch result {
 	case 0:
@@ -423,7 +449,7 @@ draw_level_up_menu :: proc(app: ^App) {
 	}
 
 	label_bufs: [3][256]byte
-	buttons: [3]Menu_Button
+	items: [3]Menu_Item
 
 	for i in 0 ..< gd.level_up_count {
 		opt := gd.level_up_options[i]
@@ -463,19 +489,20 @@ draw_level_up_menu :: proc(app: ^App) {
 			old_val,
 			new_val,
 		)
-		buttons[i] = Menu_Button {
+		items[i] = Menu_Item {
 			label = label,
 		}
 	}
 
 	def := Menu_Def {
-		label      = "LEVEL UP!",
-		layout     = .Horizontal,
-		buttons    = buttons[:gd.level_up_count],
-		item_style = CARD_STYLE,
+		label       = "LEVEL UP!",
+		layout      = .Horizontal,
+		items       = items[:gd.level_up_count],
+		style       = CARD_STYLE,
+		interaction = MENU_INTERACT_NO_SCROLL,
 	}
 	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
-	result := draw_menu(def, &gd.menu_nav, center, CARD_W, CARD_H)
+	result := draw_menu(def, &gd.menu_nav, center)
 
 	if result >= 0 && result < gd.level_up_count {
 		opt := gd.level_up_options[result]
@@ -502,20 +529,21 @@ draw_level_up_menu :: proc(app: ^App) {
 main_menu_update :: proc(app: ^App) {
 	has_save := save_exists()
 
-	buttons := [4]Menu_Button {
+	items := [4]Menu_Item {
 		{label = "[N]ew Game", hotkeys = {rl.KeyboardKey.N, nil}},
 		{label = "[L]oad Game", hotkeys = {rl.KeyboardKey.L, nil}, disabled = !has_save},
 		{label = "[S]ettings", hotkeys = {rl.KeyboardKey.S, nil}},
 		{label = "[Q]uit", hotkeys = {rl.KeyboardKey.Q, nil}},
 	}
 	def := Menu_Def {
-		label      = "OdinGame",
-		layout     = .Vertical,
-		buttons    = buttons[:],
-		item_style = BUTTON_STYLE,
+		label       = "OdinGame",
+		layout      = .Vertical,
+		items       = items[:],
+		style       = BUTTON_STYLE,
+		interaction = MENU_INTERACT_NO_SCROLL,
 	}
 	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
-	result := draw_menu(def, &app.menu_nav, center, BUTTON_W, BUTTON_H)
+	result := draw_menu(def, &app.menu_nav, center)
 
 	switch result {
 	case 0:
@@ -630,18 +658,19 @@ draw_fatal_error :: proc(msg: string) {
 	label_buf: [256]byte
 	label := fmt.bprintf(label_buf[:], "Fatal Error\n%s", msg)
 	nav := menu_nav_open()
-	buttons := [1]Menu_Button{{label = "[Enter] Quit", hotkeys = {rl.KeyboardKey.ENTER, nil}}}
+	items := [1]Menu_Item{{label = "[Enter] Quit", hotkeys = {rl.KeyboardKey.ENTER, nil}}}
 	def := Menu_Def {
-		label      = label,
-		layout     = .Vertical,
-		buttons    = buttons[:],
-		item_style = BUTTON_STYLE,
+		label       = label,
+		layout      = .Vertical,
+		items       = items[:],
+		style       = BUTTON_STYLE,
+		interaction = MENU_INTERACT_NO_SCROLL,
 	}
 	center := rl.Vector2{f32(SCREEN_WIDTH) / 2, f32(SCREEN_HEIGHT) / 2}
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
-		result := draw_menu(def, &nav, center, BUTTON_W, BUTTON_H)
+		result := draw_menu(def, &nav, center)
 		rl.EndDrawing()
 		if result >= 0 {break}
 	}

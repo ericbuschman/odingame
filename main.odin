@@ -127,6 +127,7 @@ game_update :: proc(app: ^App) {
 		gd.player.attacks[:],
 		&gd.attack_nav,
 		gd.player.selected_attack,
+		gd.state == .Playing,
 	)
 	switch gd.state {
 	case .Paused:

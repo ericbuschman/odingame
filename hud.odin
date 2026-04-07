@@ -9,6 +9,7 @@ draw_hud :: proc(
 	attacks: []Attack,
 	nav: ^Menu_Nav,
 	selected_attack: ^Attack,
+	interactive: bool,
 ) -> ^Attack {
 	if hp <= 0 {return selected_attack}
 
@@ -30,7 +31,7 @@ draw_hud :: proc(
 		}
 	}
 
-	buttons: [3]Menu_Button
+	items: [3]Menu_Item
 	buf: [3][128]byte
 	for i in 0 ..< n {
 		atk := &attacks[i]
@@ -62,25 +63,24 @@ draw_hud :: proc(
 				eff_cd,
 			)
 		}
-		buttons[i] = Menu_Button {
+		items[i] = Menu_Item {
 			label   = label,
 			hotkeys = {rl.KeyboardKey(i + 49), nil},
 		}
 	}
 
 	def := Menu_Def {
-		layout     = .Horizontal,
-		buttons    = buttons[:n],
-		item_style = CARD_STYLE,
+		layout      = .Horizontal,
+		items       = items[:n],
+		style       = CARD_STYLE,
+		interaction = MENU_INTERACT_SCROLL_KBD if interactive else {},
 	}
 
-	card_h: f32 = 140
-	card_w: f32 = 100
 	margin: f32 = 2
 	sw := f32(rl.GetScreenWidth())
 	sh := f32(rl.GetScreenHeight())
-	center := rl.Vector2{sw / 2, sh - card_h / 2 - margin}
-	attack_selector := draw_menu(def, nav, center, card_w, card_h)
+	center := rl.Vector2{sw / 2, sh - CARD_STYLE.item_h / 2 - margin}
+	attack_selector := draw_menu(def, nav, center)
 	if attack_selector >= 0 {
 		fmt.printfln("Attack selected: %d", attack_selector)
 	}
