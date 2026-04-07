@@ -121,7 +121,6 @@ game_update :: proc(app: ^App) {
 	// --- End world-space rendering ---
 
 	// --- Screen-space overlay rendering ---
-	gd.attack_nav.selected = gd.player.selected_attack
 	gd.player.selected_attack = draw_hud(
 		gd.heart_tex,
 		gd.player.health,

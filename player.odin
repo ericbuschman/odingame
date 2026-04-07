@@ -6,7 +6,7 @@ import rl "vendor:raylib"
 Player :: struct {
 	sprite:          rl.Texture2D,
 	attacks:         [dynamic]Attack,
-	selected_attack: int,
+	selected_attack: ^Attack,
 	name:            string,
 	loc:             rl.Vector2,
 	velocity:        rl.Vector2,
@@ -25,9 +25,8 @@ Player :: struct {
 
 player_init :: proc(sprite: rl.Texture2D) -> Player {
 	p := Player {
-		sprite          = sprite,
-		attacks         = make([dynamic]Attack, 0, 10),
-		selected_attack = 0,
+		sprite  = sprite,
+		attacks = make([dynamic]Attack, 0, 10),
 	}
 	player_apply_defaults(&p)
 	return p
@@ -38,7 +37,6 @@ player_deinit :: proc(p: ^Player) {
 }
 
 player_apply_defaults :: proc(p: ^Player) {
-	p.selected_attack = 0
 	p.name = "Player"
 	p.loc = {150, 150}
 	p.velocity = {0, 0}
@@ -71,6 +69,7 @@ player_apply_defaults :: proc(p: ^Player) {
 		),
 		make_attack("PewPew", Projectile_Config{speed = 500, radius = 3}, 1, 1.0),
 	)
+	p.selected_attack = &p.attacks[0]
 }
 
 player_reset :: proc(p: ^Player) {
@@ -256,52 +255,61 @@ player_update :: proc(
 ) {
 	player_movement(p, gd, obstacles, bounds)
 
-	if p.selected_attack < len(p.attacks) {
-		atk := &p.attacks[p.selected_attack]
-		if attack_tick(atk) {
-			switch cfg in atk.attack_type {
-			case Melee_Config:
-				reach := cfg.length + f32(atk.upgrades.reach) * REACH_PER_UPGRADE
-				dmg := atk.damage * (1 + atk.upgrades.damage)
-				m := melee_new_with_params(
-					p,
-					target,
-					dmg,
-					cfg.style,
-					cfg.width,
-					reach,
-					cfg.duration,
-					cfg.sweep_radius,
-				)
-				append(&gd.melee_attacks, m)
+	if p.selected_attack == nil {return}
+	if !attack_tick(p.selected_attack) {return}
+	switch cfg in p.selected_attack.attack_type {
+	case Melee_Config:
+		player_fire_melee(p, gd, target, cfg)
+	case Projectile_Config:
+		player_fire_projectile(p, gd, target, cfg)
+	}
+}
 
-			case Projectile_Config:
-				count := 1 + int(atk.upgrades.projectiles)
-				dmg := atk.damage * (1 + atk.upgrades.damage)
+player_fire_melee :: proc(p: ^Player, gd: ^Game_Data, target: rl.Vector2, cfg: Melee_Config) {
+	reach := cfg.length + f32(p.selected_attack.upgrades.reach) * REACH_PER_UPGRADE
+	dmg := p.selected_attack.damage * (1 + p.selected_attack.upgrades.damage)
+	m := melee_new_with_params(
+		p,
+		target,
+		dmg,
+		cfg.style,
+		cfg.width,
+		reach,
+		cfg.duration,
+		cfg.sweep_radius,
+	)
+	append(&gd.melee_attacks, m)
+}
 
-				for i in 0 ..< count {
-					proj := projectile_new(p, target, dmg, cfg.speed)
-					if atk.upgrades.damage > 0 {
-						proj.glow = true
-					}
+player_fire_projectile :: proc(
+	p: ^Player,
+	gd: ^Game_Data,
+	target: rl.Vector2,
+	cfg: Projectile_Config,
+) {
+	count := 1 + int(p.selected_attack.upgrades.projectiles)
+	dmg := p.selected_attack.damage * (1 + p.selected_attack.upgrades.damage)
 
-					// Spread extra projectiles perpendicular to the firing direction
-					if i > 0 {
-						spacing: f32 = 20
-						// Alternate sides: i=1 -> +1, i=2 -> -1, i=3 -> +2, i=4 -> -2, ...
-						side := i32(1) if i % 2 != 0 else i32(-1)
-						offset := f32((i + 1) / 2) * spacing * f32(side)
-						vel_len := rl.Vector2Length(proj.velocity)
-						if vel_len > 0 {
-							perp_x := proj.velocity.y / vel_len
-							perp_y := -proj.velocity.x / vel_len
-							proj.curloc.x += perp_x * offset
-							proj.curloc.y += perp_y * offset
-						}
-					}
-					append(&gd.projectiles, proj)
-				}
+	for i in 0 ..< count {
+		proj := projectile_new(p, target, dmg, cfg.speed)
+		if p.selected_attack.upgrades.damage > 0 {
+			proj.glow = true
+		}
+
+		// Spread extra projectiles perpendicular to the firing direction
+		if i > 0 {
+			spacing: f32 = 20
+			// Alternate sides: i=1 -> +1, i=2 -> -1, i=3 -> +2, i=4 -> -2, ...
+			side := i32(1) if i % 2 != 0 else i32(-1)
+			offset := f32((i + 1) / 2) * spacing * f32(side)
+			vel_len := rl.Vector2Length(proj.velocity)
+			if vel_len > 0 {
+				perp_x := proj.velocity.y / vel_len
+				perp_y := -proj.velocity.x / vel_len
+				proj.curloc.x += perp_x * offset
+				proj.curloc.y += perp_y * offset
 			}
 		}
+		append(&gd.projectiles, proj)
 	}
 }

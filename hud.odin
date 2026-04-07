@@ -8,8 +8,8 @@ draw_hud :: proc(
 	hp: i32,
 	attacks: []Attack,
 	nav: ^Menu_Nav,
-	selected_attack: int,
-) -> int {
+	selected_attack: ^Attack,
+) -> ^Attack {
 	if hp <= 0 {return selected_attack}
 
 	// Hearts — plain screen coords, no camera needed
@@ -21,6 +21,14 @@ draw_hud :: proc(
 	// Attack cards — reuse draw_menu so styling/interaction is centralized
 	n := min(len(attacks), 3)
 	if n == 0 {return selected_attack}
+
+	// Sync nav to the current selection
+	for i in 0 ..< n {
+		if &attacks[i] == selected_attack {
+			nav.selected = i
+			break
+		}
+	}
 
 	buttons: [3]Menu_Button
 	buf: [3][128]byte
@@ -76,8 +84,8 @@ draw_hud :: proc(
 	if attack_selector >= 0 {
 		fmt.printfln("Attack selected: %d", attack_selector)
 	}
-	if attack_selector >= 0 && attack_selector != selected_attack {
-		return attack_selector
+	if attack_selector >= 0 && &attacks[attack_selector] != selected_attack {
+		return &attacks[attack_selector]
 	}
 	return selected_attack
 }
