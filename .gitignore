@@ -1,5 +1,6 @@
 saves/save.json
 settings.json
+.DS_Store
 
 # Odin build artifacts
 odingame
