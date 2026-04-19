@@ -5,3 +5,4 @@ settings.json
 # Odin build artifacts
 odingame
 *.o
+~/.config/markdownlint/.markdownlint.yaml
