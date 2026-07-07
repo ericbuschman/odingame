@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import "core:math/rand"
 import rl "vendor:raylib"
 
@@ -13,8 +14,8 @@ Game_Data :: struct {
 	particles:        Particle_System,
 	boulder_tex:      rl.Texture2D,
 	heart_tex:        rl.Texture2D,
-	player_tex:       rl.Texture2D,
-	enemy_tex:        rl.Texture2D,
+	atlas:            Sprite_Atlas,
+	weapons_tex:      [dynamic]rl.Texture2D,
 	player:           Player,
 	enemies:          [dynamic]Enemy,
 	projectiles:      [dynamic]Projectile,
@@ -32,16 +33,24 @@ game_data_init :: proc() -> Game_Data {
 	boulder_tex := load_sprite("boulder")
 	heart_tex := load_sprite("heart")
 	player_tex := load_sprite("player")
-	enemy_tex := load_sprite("enemy")
 	p := player_init(player_tex)
+
+	atlas, atlas_ok := load_atlas("resources/sprites/atlas.json")
+	if !atlas_ok {
+		fmt.eprintln("Failed to load sprite atlas")
+	}
+
+	weapons_tex := make([dynamic]rl.Texture2D, 0, 2)
+	append(&weapons_tex, load_sprite("sword", 0.5))
+	append(&weapons_tex, load_sprite("bow", 0.5))
 
 	return Game_Data {
 		time_accumulator = 0,
 		particles = particle_system_init(),
 		boulder_tex = boulder_tex,
 		heart_tex = heart_tex,
-		player_tex = player_tex,
-		enemy_tex = enemy_tex,
+		atlas = atlas,
+		weapons_tex = weapons_tex,
 		player = p,
 		enemies = make([dynamic]Enemy, 0, 100),
 		projectiles = make([dynamic]Projectile, 0, 100),
@@ -61,8 +70,33 @@ game_data_deinit :: proc(gd: ^Game_Data) {
 	particle_system_deinit(&gd.particles)
 	rl.UnloadTexture(gd.boulder_tex)
 	rl.UnloadTexture(gd.heart_tex)
-	rl.UnloadTexture(gd.player_tex)
-	rl.UnloadTexture(gd.enemy_tex)
+
+	rl.UnloadTexture(gd.player.sprite)
+
+	for key, tex in gd.atlas.textures {
+		rl.UnloadTexture(tex)
+		delete(key)
+	}
+	delete(gd.atlas.textures)
+
+	for name, val in gd.atlas.statics {
+		delete(name)
+		delete(val.texture_key)
+	}
+	delete(gd.atlas.statics)
+
+	for name, val in gd.atlas.animations {
+		delete(name)
+		delete(val.texture_key)
+		delete(val.rects)
+	}
+	delete(gd.atlas.animations)
+
+	for tex in gd.weapons_tex {
+		rl.UnloadTexture(tex)
+	}
+	delete(gd.weapons_tex)
+
 	player_deinit(&gd.player)
 	delete(gd.enemies)
 	delete(gd.projectiles)

@@ -1,0 +1,118 @@
+{
+  "static_sprites": {
+    "dirt_0": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 42,
+      "y": 36,
+      "w": 350,
+      "h": 350
+    },
+    "dirt_1": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 411,
+      "y": 36,
+      "w": 350,
+      "h": 350
+    },
+    "dirt_2": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 42,
+      "y": 411,
+      "w": 350,
+      "h": 350
+    },
+    "dirt_3": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 42,
+      "y": 411,
+      "w": 350,
+      "h": 350
+    },
+    "grass_0": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 779,
+      "y": 36,
+      "w": 350,
+      "h": 350
+    },
+    "grass_1": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 779,
+      "y": 411,
+      "w": 350,
+      "h": 350
+    },
+    "grass_2": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 411,
+      "y": 411,
+      "w": 350,
+      "h": 350
+    },
+    "grass_3": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 411,
+      "y": 411,
+      "w": 350,
+      "h": 350
+    },
+    "wall_vert": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 552,
+      "y": 0,
+      "w": 350,
+      "h": 350
+    },
+    "wall_horiz_0": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 690,
+      "y": 0,
+      "w": 350,
+      "h": 350
+    },
+    "wall_corner": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 552,
+      "y": 138,
+      "w": 350,
+      "h": 350
+    },
+    "wall_horiz_1": {
+      "texture_file": "fantasy_sprites.png",
+      "x": 690,
+      "y": 138,
+      "w": 350,
+      "h": 350
+    }
+  },
+  "animations": {
+    "goblin_walk": {
+      "texture_file": "fantasy_sprites.png",
+      "frames": [
+        { "x": 192, "y": 384, "w": 64, "h": 64 },
+        { "x": 256, "y": 384, "w": 64, "h": 64 },
+        { "x": 320, "y": 384, "w": 64, "h": 64 },
+        { "x": 448, "y": 384, "w": 64, "h": 64 }
+      ]
+    },
+    "skeleton_walk": {
+      "texture_file": "fantasy_sprites.png",
+      "frames": [
+        { "x": 0, "y": 832, "w": 64, "h": 64 },
+        { "x": 64, "y": 832, "w": 64, "h": 64 },
+        { "x": 192, "y": 832, "w": 64, "h": 64 },
+        { "x": 256, "y": 832, "w": 64, "h": 64 }
+      ]
+    },
+    "zombie_walk": {
+      "texture_file": "fantasy_sprites.png",
+      "frames": [
+        { "x": 0, "y": 896, "w": 64, "h": 64 },
+        { "x": 64, "y": 896, "w": 64, "h": 64 },
+        { "x": 192, "y": 896, "w": 64, "h": 64 },
+        { "x": 256, "y": 896, "w": 64, "h": 64 },
+        { "x": 320, "y": 896, "w": 64, "h": 64 }
+      ]
+    }
+  }
+}

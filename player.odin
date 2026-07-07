@@ -21,6 +21,9 @@ Player :: struct {
 	is_dodging:      bool,
 	dodge_timer:     f32,
 	dodge_dir:       rl.Vector2,
+	anim_state:      Anim_State,
+	anim_frame:      int,
+	anim_timer:      f32,
 }
 
 player_init :: proc(sprite: rl.Texture2D) -> Player {
@@ -51,6 +54,9 @@ player_apply_defaults :: proc(p: ^Player) {
 	p.is_dodging = false
 	p.dodge_timer = 0
 	p.dodge_dir = {0, 0}
+	p.anim_state = .Idle
+	p.anim_frame = 0
+	p.anim_timer = 0.0
 
 	clear(&p.attacks)
 	append(
@@ -66,8 +72,9 @@ player_apply_defaults :: proc(p: ^Player) {
 			},
 			2,
 			1.0,
+			0,
 		),
-		make_attack("PewPew", Projectile_Config{speed = 500, radius = 3}, 1, 1.0),
+		make_attack("PewPew", Projectile_Config{speed = 500, radius = 3}, 1, 1.0, 1),
 	)
 	p.selected_attack = &p.attacks[0]
 }
@@ -254,6 +261,23 @@ player_update :: proc(
 	bounds: rl.Rectangle,
 ) {
 	player_movement(p, gd, obstacles, bounds)
+
+	// Tick animation timer
+	p.anim_timer += rl.GetFrameTime()
+	if p.anim_timer >= 0.15 {
+		p.anim_timer = 0.0
+		p.anim_frame += 1
+
+		// Safe division / wrap-around
+		frame_count := 1
+
+		if p.anim_state == .Attack && p.anim_frame >= frame_count {
+			p.anim_state = .Idle
+			p.anim_frame = 0
+		} else {
+			p.anim_frame %= frame_count
+		}
+	}
 
 	if p.selected_attack == nil {return}
 	if !attack_tick(p.selected_attack) {return}

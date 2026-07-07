@@ -30,16 +30,17 @@ Spawner_Save :: struct {
 }
 
 Enemy_Save :: struct {
-	loc_x:       f32    `json:"loc_x"`,
-	loc_y:       f32    `json:"loc_y"`,
-	personality: int    `json:"personality"`,
-	health:      i32    `json:"health"`,
-	speed:       f32    `json:"speed"`,
-	scale:       f32    `json:"scale"`,
-	proj_speed:  f32    `json:"proj_speed"`,
-	proj_radius: f32    `json:"proj_radius"`,
-	atk_damage:  i32    `json:"atk_damage"`,
-	atk_interval: f32   `json:"atk_interval"`,
+	loc_x:        f32    `json:"loc_x"`,
+	loc_y:        f32    `json:"loc_y"`,
+	personality:  int    `json:"personality"`,
+	health:       i32    `json:"health"`,
+	speed:        f32    `json:"speed"`,
+	scale:        f32    `json:"scale"`,
+	proj_speed:   f32    `json:"proj_speed"`,
+	proj_radius:  f32    `json:"proj_radius"`,
+	atk_damage:   i32    `json:"atk_damage"`,
+	atk_interval: f32    `json:"atk_interval"`,
+	anim_index:   int    `json:"anim_index"`,
 }
 
 Save_File :: struct {
@@ -58,12 +59,13 @@ save_game :: proc(game: ^Game) -> bool {
 
 	for e, i in gd.enemies {
 		es := Enemy_Save {
-			loc_x       = e.loc.x,
-			loc_y       = e.loc.y,
+			loc_x        = e.loc.x,
+			loc_y        = e.loc.y,
 			personality  = int(e.personality),
 			health       = e.health,
 			speed        = e.speed,
 			scale        = e.scale,
+			anim_index   = e.anim_index,
 		}
 		// All current enemies have exactly one Projectile_Config attack
 		if len(e.attacks) > 0 {
@@ -154,7 +156,7 @@ save_load :: proc(game: ^Game) -> bool {
 		name := fmt.bprintf(name_buf[:], "Enemy%d", sf.spawner.enemy_id)
 		e := enemy_new(
 			{es.loc_x, es.loc_y},
-			gd.enemy_tex,
+			es.anim_index,
 			name,
 			Enemy_State(es.personality),
 			es.speed,
@@ -168,6 +170,7 @@ save_load :: proc(game: ^Game) -> bool {
 				Projectile_Config{speed = es.proj_speed, radius = es.proj_radius},
 				es.atk_damage,
 				es.atk_interval,
+				1,
 			),
 		)
 		append(&gd.enemies, e)

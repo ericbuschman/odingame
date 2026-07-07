@@ -2,7 +2,6 @@
 
 package main
 
-import "core:fmt"
 import "core:math/rand"
 import "core:os"
 import rl "vendor:raylib"
@@ -78,7 +77,7 @@ game_update :: proc(app: ^App) {
 
 	// --- World-space rendering ---
 	rl.BeginMode2D(gd.camera)
-	game_map_draw(&game.game_map, gd.camera)
+	game_map_draw(&game.game_map, &gd.atlas, gd.camera)
 
 	gsr := process_game_state(gd.state, gd)
 	gd.state = gsr.new_state
@@ -125,6 +124,7 @@ game_update :: proc(app: ^App) {
 	// --- Screen-space overlay rendering ---
 	gd.player.selected_attack = draw_hud(
 		gd.heart_tex,
+		gd.weapons_tex[:],
 		gd.player.health,
 		gd.player.attacks[:],
 		&gd.attack_nav,
@@ -164,7 +164,8 @@ update_enemies :: proc(game: ^Game) {
 
 		if enemy.active {
 			enemy_movement(enemy, &gd.player, game.game_map.obstructions[:])
-			enemy_draw(enemy)
+			enemy_update_animation(enemy, &gd.atlas, rl.GetFrameTime())
+			enemy_draw(enemy, &gd.atlas)
 			i += 1
 		} else {
 			gd.player.score += 1

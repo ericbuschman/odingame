@@ -21,10 +21,11 @@ spawn_initial_enemy :: proc(gd: ^Game_Data, spawner: ^Spawner) {
 	name_buf: [64]byte
 	name := fmt.bprintf(name_buf[:], "Enemy%d", spawner.enemy_id)
 
-	new_enemy := enemy_new({555, 555}, gd.enemy_tex, name, .Keep_Away, 100, 2)
+	anim_idx := int(get_rand(0, f32(len(MONSTER_ANIMS))))
+	new_enemy := enemy_new({555, 555}, anim_idx, name, .Keep_Away, 100, 2)
 	append(
 		&new_enemy.attacks,
-		make_attack("PewPew", Projectile_Config{speed = 500, radius = 3}, 1, 1.5),
+		make_attack("PewPew", Projectile_Config{speed = 500, radius = 3}, 1, 1.5, 1),
 	)
 	append(&gd.enemies, new_enemy)
 }
@@ -40,18 +41,19 @@ spawn_enemies :: proc(game: ^Game) {
 		name := fmt.bprintf(name_buf[:], "Enemy%d", spawner.enemy_id)
 
 		range_val: f32 = 200 * f32(STEP_SIZE)
+		anim_idx := int(get_rand(0, f32(len(MONSTER_ANIMS))))
 		new_enemy := enemy_new(
 			{
 				get_rand(
 					max(f32(0), gd.player.loc.x - range_val),
-					min(game.map_width - f32(gd.enemy_tex.width), gd.player.loc.x + range_val),
+					min(game.map_width - 64, gd.player.loc.x + range_val),
 				),
 				get_rand(
 					max(f32(0), gd.player.loc.y - range_val),
-					min(game.map_height - f32(gd.enemy_tex.height), gd.player.loc.y + range_val),
+					min(game.map_height - 64, gd.player.loc.y + range_val),
 				),
 			},
-			gd.enemy_tex,
+			anim_idx,
 			name,
 			.Towards_Player,
 			100,
@@ -59,7 +61,7 @@ spawn_enemies :: proc(game: ^Game) {
 		)
 		append(
 			&new_enemy.attacks,
-			make_attack("PewPew", Projectile_Config{speed = 500, radius = 3}, 1, 1.5),
+			make_attack("PewPew", Projectile_Config{speed = 500, radius = 3}, 1, 1.5, 1),
 		)
 		spawner.enemy1_timer = get_rand(1, 2.5)
 		// fmt.printf(

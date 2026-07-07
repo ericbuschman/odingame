@@ -55,6 +55,7 @@ Attack :: struct {
 	interval:           f32,
 	remaining_interval: f32,
 	upgrades:           Attack_Upgrades,
+	weapon_tex_idx:     int,
 }
 
 make_attack :: proc(
@@ -62,6 +63,7 @@ make_attack :: proc(
 	attack_type: Attack_Type,
 	damage: i32,
 	interval: f32,
+	weapon_tex_idx := 0,
 ) -> Attack {
 	return Attack {
 		name = name,
@@ -69,6 +71,7 @@ make_attack :: proc(
 		damage = damage,
 		interval = interval,
 		remaining_interval = interval,
+		weapon_tex_idx = weapon_tex_idx,
 	}
 }
 

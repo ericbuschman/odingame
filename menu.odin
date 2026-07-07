@@ -710,3 +710,208 @@ draw_menu_button :: proc(rect: rl.Rectangle, text: cstring, mouse_pos: rl.Vector
 
 	return false
 }
+
+draw_icon_menu :: proc(
+	def: Menu_Def,
+	nav: ^Menu_Nav,
+	screen_center: rl.Vector2,
+	textures: []rl.Texture2D,
+	opacity: f32,
+	border_color: rl.Color,
+	border_width: f32,
+	scale: f32,
+) -> int {
+	n := len(def.items)
+	if n == 0 {return -1}
+
+	item_w := def.style.item_w * scale
+	item_h := def.style.item_h * scale
+	item_spacing := MENU_ITEM_SPACING * scale
+	font_size := i32(f32(def.style.font_size) * scale)
+
+	// Grid dimensions
+	num_cols := 1
+	if def.layout == .Horizontal {
+		num_cols = min(n, MENU_MAX_COLS)
+	}
+	num_rows := (n + num_cols - 1) / num_cols
+	grid_w := f32(num_cols) * item_w + f32(num_cols - 1) * item_spacing
+	grid_h := f32(num_rows) * item_h + f32(num_rows - 1) * item_spacing
+
+	// Label block
+	label_h := measure_label_height(def.label, i32(f32(MENU_LABEL_FS) * scale), i32(f32(MENU_LABEL_LS) * scale))
+	label_gap := MENU_LABEL_GAP * scale if len(def.label) > 0 else 0
+
+	total_h := label_h + label_gap + grid_h
+	origin_y := screen_center.y - total_h / 2
+	origin_x := screen_center.x - grid_w / 2
+
+	// Draw label
+	if len(def.label) > 0 {
+		draw_menu_label(def.label, screen_center.x, origin_y, i32(f32(MENU_LABEL_FS) * scale), i32(f32(MENU_LABEL_LS) * scale))
+	}
+
+	items_start_y := origin_y + label_h + label_gap
+
+	first_frame := nav.just_opened
+	if first_frame {
+		nav.just_opened = false
+	}
+
+	// Mouse wheel navigation
+	if .Mouse_Scroll in def.interaction && !first_frame {
+		wheel := rl.GetMouseWheelMove()
+		if wheel >= 1 {
+			nav.selected = prev_enabled(def.items, nav.selected, n)
+			return nav.selected
+		} else if wheel <= -1 {
+			nav.selected = next_enabled(def.items, nav.selected, n)
+			return nav.selected
+		}
+	}
+
+	// Arrow-key navigation
+	if .Keyboard in def.interaction && !first_frame {
+		if def.layout == .Vertical {
+			if rl.IsKeyPressed(.UP) {
+				nav.selected = prev_enabled(def.items, nav.selected, n)
+			}
+			if rl.IsKeyPressed(.DOWN) {
+				nav.selected = next_enabled(def.items, nav.selected, n)
+			}
+		} else {
+			if rl.IsKeyPressed(.LEFT) {
+				nav.selected = prev_enabled(def.items, nav.selected, n)
+			}
+			if rl.IsKeyPressed(.RIGHT) {
+				nav.selected = next_enabled(def.items, nav.selected, n)
+			}
+			if rl.IsKeyPressed(.UP) {
+				candidate := nav.selected - num_cols
+				if candidate >= 0 && !def.items[candidate].disabled {
+					nav.selected = candidate
+				}
+			}
+			if rl.IsKeyPressed(.DOWN) {
+				candidate := nav.selected + num_cols
+				if candidate < n && !def.items[candidate].disabled {
+					nav.selected = candidate
+				}
+			}
+		}
+	}
+
+	mouse: rl.Vector2
+	if .Mouse_Click in def.interaction {
+		mouse = rl.GetMousePosition()
+	}
+
+	// Draw items
+	rects: [32]rl.Rectangle
+	for i in 0 ..< n {
+		col := i % num_cols
+		row := i / num_cols
+		rects[i] = rl.Rectangle {
+			x      = origin_x + f32(col) * (item_w + item_spacing),
+			y      = items_start_y + f32(row) * (item_h + item_spacing),
+			width  = item_w,
+			height = item_h,
+		}
+
+		item := def.items[i]
+		rect := rects[i]
+
+		hovered :=
+			.Mouse_Click in def.interaction &&
+			!item.disabled &&
+			rl.CheckCollisionPointRec(mouse, rect)
+		if hovered {
+			nav.selected = i
+		}
+		is_selected := !item.disabled && nav.selected == i
+
+		if hovered || is_selected {
+			t := f32(rl.GetTime())
+			osc := (math.sin(t * 5) + 1) / 2
+			alpha := f32(0.3 + osc * 0.4) * opacity
+			gp := def.style.glow_pad * scale
+			glow_rect := rl.Rectangle {
+				x      = rect.x - gp,
+				y      = rect.y - gp,
+				width  = rect.width + gp * 2,
+				height = rect.height + gp * 2,
+			}
+			rl.DrawRectangleRec(glow_rect, rl.Fade(def.style.glow, alpha))
+		}
+
+		bg := rl.Fade(def.style.bg, opacity if !item.disabled else 0.4 * opacity)
+		rl.DrawRectangleRec(rect, bg)
+
+		border := border_color
+		if hovered || is_selected {
+			border = def.style.border_hl
+		}
+		border = rl.Fade(border, opacity if !item.disabled else 0.3 * opacity)
+		border_w := max(f32(1.0), border_width * scale)
+		rl.DrawRectangleLinesEx(rect, border_w, border)
+
+		// Draw centered texture in the top section
+		if i < len(textures) {
+			tex := textures[i]
+			if tex.id != 0 {
+				icon_scale := 3.0 * scale
+				tex_w := f32(tex.width) * icon_scale
+				tex_h := f32(tex.height) * icon_scale
+
+				tex_x := rect.x + (rect.width - tex_w) / 2.0
+				tex_y := rect.y + (rect.height * 0.5 - tex_h) / 2.0 + 10.0 * scale
+
+				tex_color := rl.Fade(rl.WHITE, opacity if !item.disabled else 0.3 * opacity)
+				rl.DrawTextureEx(tex, {tex_x, tex_y}, 0.0, icon_scale, tex_color)
+			}
+		}
+
+		text_color := rl.Fade(rl.WHITE, opacity if !item.disabled else 0.35 * opacity)
+		text_rect := rl.Rectangle {
+			x      = rect.x,
+			y      = rect.y + rect.height * 0.5,
+			width  = rect.width,
+			height = rect.height * 0.5,
+		}
+		draw_item_text(text_rect, item.label, font_size, text_color)
+	}
+
+	if first_frame {return -1}
+
+	// Activation: hotkeys (keyboard gated by .Keyboard, mouse button gated by
+	// .Mouse_Click), then Enter on keyboard selection, then mouse click.
+	for i in 0 ..< n {
+		item := def.items[i]
+		if item.disabled {continue}
+		for hk in item.hotkeys {
+			switch k in hk {
+			case rl.KeyboardKey:
+				if .Keyboard in def.interaction && k != .KEY_NULL && rl.IsKeyPressed(k) {return i}
+			case rl.MouseButton:
+				if .Mouse_Click in def.interaction && rl.IsMouseButtonPressed(k) {return i}
+			}
+		}
+	}
+	if .Keyboard in def.interaction && nav.selected >= 0 && nav.selected < n {
+		item := def.items[nav.selected]
+		if !item.disabled && rl.IsKeyPressed(.ENTER) {
+			return nav.selected
+		}
+	}
+	if .Mouse_Click in def.interaction {
+		for i in 0 ..< n {
+			item := def.items[i]
+			if item.disabled {continue}
+			if rl.CheckCollisionPointRec(mouse, rects[i]) && rl.IsMouseButtonPressed(.LEFT) {
+				return i
+			}
+		}
+	}
+
+	return -1
+}

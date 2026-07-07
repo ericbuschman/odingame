@@ -18,6 +18,13 @@ Move_Dir :: enum {
 	None,
 }
 
+Anim_State :: enum {
+	Idle,
+	Walk,
+	Attack,
+}
+
+
 Game_State_Result :: struct {
 	new_state:        Game_State,
 	time_accumulator: f32,

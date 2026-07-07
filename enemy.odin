@@ -10,9 +10,21 @@ Enemy_State :: enum {
 	Run_Away,
 }
 
+MONSTER_ANIMS := [?]string{
+	"goblin_walk",
+	"orc_walk",
+	"mage_idle",
+	"wolf_run",
+	"dragon_fire",
+	"skeleton_walk",
+	"zombie_walk",
+}
+
 Enemy :: struct {
 	loc:         rl.Vector2,
-	sprite:      rl.Texture2D,
+	anim_index:  int,
+	anim_frame:  int,
+	anim_timer:  f32,
 	personality: Enemy_State,
 	state:       Enemy_State,
 	rotation:    f32,
@@ -26,7 +38,7 @@ Enemy :: struct {
 
 enemy_new :: proc(
 	loc: rl.Vector2,
-	sprite: rl.Texture2D,
+	anim_index: int,
 	title: string,
 	personality: Enemy_State,
 	speed: f32,
@@ -34,7 +46,9 @@ enemy_new :: proc(
 ) -> Enemy {
 	return Enemy {
 		loc = loc,
-		sprite = sprite,
+		anim_index = anim_index,
+		anim_frame = 0,
+		anim_timer = 0,
 		personality = personality,
 		state = .Idle,
 		rotation = 0,
@@ -43,7 +57,7 @@ enemy_new :: proc(
 		health = health,
 		active = true,
 		attacks = make([dynamic]Attack, 0, 4),
-		scale = 2.0,
+		scale = 1.0,
 	}
 }
 
@@ -59,8 +73,8 @@ enemy_take_damage :: proc(e: ^Enemy, damage: i32) {
 }
 
 enemy_get_area :: proc(e: ^Enemy) -> rl.Rectangle {
-	w := f32(e.sprite.width) * e.scale
-	h := f32(e.sprite.height) * e.scale
+	w := f32(64) * e.scale
+	h := f32(64) * e.scale
 	return {e.loc.x - w / 2, e.loc.y - h / 2, w, h}
 }
 
@@ -150,15 +164,43 @@ enemy_update_attacks :: proc(e: ^Enemy, target: rl.Vector2, spawn_queue: ^[dynam
 	}
 }
 
-enemy_draw :: proc(e: ^Enemy) {
-	w := f32(e.sprite.width) * e.scale
-	h := f32(e.sprite.height) * e.scale
+enemy_update_animation :: proc(e: ^Enemy, atlas: ^Sprite_Atlas, dt: f32) {
+	anim_name := MONSTER_ANIMS[e.anim_index]
+	anim, found := atlas.animations[anim_name]
+	if !found || len(anim.rects) == 0 {
+		return
+	}
+	e.anim_timer += dt
+	frame_duration : f32 = 0.15
+	if e.anim_timer >= frame_duration {
+		e.anim_timer -= frame_duration
+		e.anim_frame = (e.anim_frame + 1) % len(anim.rects)
+	}
+}
+
+enemy_draw :: proc(e: ^Enemy, atlas: ^Sprite_Atlas) {
+	w := f32(64) * e.scale
+	h := f32(64) * e.scale
 
 	origin := rl.Vector2{w / 2, h / 2}
-	source := rl.Rectangle{0, 0, f32(e.sprite.width), f32(e.sprite.height)}
+	
+	anim_name := MONSTER_ANIMS[e.anim_index]
+	anim, found := atlas.animations[anim_name]
+	source: rl.Rectangle
+	tex: rl.Texture2D
+	tex_found := false
+	if found && len(anim.rects) > 0 {
+		source = anim.rects[e.anim_frame % len(anim.rects)]
+		tex, tex_found = atlas.textures[anim.texture_key]
+	} else {
+		source = rl.Rectangle{0, 0, 64, 64}
+	}
+
 	dest := rl.Rectangle{e.loc.x, e.loc.y, w, h}
 
-	rl.DrawTexturePro(e.sprite, source, dest, origin, e.rotation, rl.WHITE)
+	if tex_found {
+		rl.DrawTexturePro(tex, source, dest, origin, e.rotation, rl.WHITE)
+	}
 
 	when SHOW_DEBUG {
 		adjusted := rl.Rectangle{dest.x - origin.x, dest.y - origin.y, dest.width, dest.height}
