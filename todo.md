@@ -1,24 +1,7 @@
-# Todo list
-
-- [x] I want to pull in round images for the player and enemies with a directional indicator
-- [x] Add movement with keybindings for player
-- [x] Create enemy shooting the player can attempt to dodge and a health declinator
-- [x] Extract attack system where we attach attacks to entities and call attacks on the loop
-- [x] Add pathing to entities
-- [x] Add discord bot high score concept
-- [x] Background
-- [x] Improved the AI to now move towards player or keep away.
-  - [x] Add 'Hunter' personality, these enemies search the map for the player when it isn't on screen
-- [x] Build excluded walk / fire areas (like boulders / walls / etc)
-- [ ] The game loop is too long, we need to extract the logic into functions and process them in steps:
-  - [ ] Process New Enemies / Projectiles
-  - [x] Detect Collisions and deal damage / block
-  - [x] Draw entities
-- [ ] New Game / Main Menu UI
-- [x] spruce up Menu with rectangle / standardized structure
-- [ ] Upgrades for player
-  - [ ] Upgrade system with flexilibty
-  - [ ] UI for accepting upgrades
-  - [ ] Character icon changes? How to make this flexible
-- [ ] Add additional attack types on both enemies and player upgrades
-  - [x] Complete for player\*, meaning we now support a slash and stab
+* Todo
+- [ ] Animated Sprites
+- [ ] New artwork for arrows and swords
+- [x] Update weapon bar at bottom to be just icons of the weapon / shoot, and maybe transparent
+- [ ] Data structure cleanup
+    - [ ] Textures in game_data, should be on entities, this was done to make it so you could just reference the sprite in memory
+    - [x] Player has extra properties like width/height, this should be available through the texture rect

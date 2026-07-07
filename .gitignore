@@ -6,3 +6,5 @@ settings.json
 odingame
 *.o
 ~/.config/markdownlint/.markdownlint.yaml
+*.png~
+*.kra
