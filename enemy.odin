@@ -1,6 +1,5 @@
 package main
 
-import "core:fmt"
 import rl "vendor:raylib"
 
 Enemy_State :: enum {
@@ -12,12 +11,7 @@ Enemy_State :: enum {
 
 MONSTER_ANIMS := [?]string{
 	"goblin_walk",
-	"orc_walk",
-	"mage_idle",
-	"wolf_run",
-	"dragon_fire",
 	"skeleton_walk",
-	"zombie_walk",
 }
 
 Enemy :: struct {
