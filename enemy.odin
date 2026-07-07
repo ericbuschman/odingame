@@ -9,25 +9,23 @@ Enemy_State :: enum {
 	Run_Away,
 }
 
-MONSTER_ANIMS := [?]string{
-	"goblin_walk",
-	"skeleton_walk",
-}
+MONSTER_ANIMS := [?]string{"goblin_walk", "skeleton_walk"}
 
 Enemy :: struct {
-	loc:         rl.Vector2,
-	anim_index:  int,
-	anim_frame:  int,
-	anim_timer:  f32,
-	personality: Enemy_State,
-	state:       Enemy_State,
-	rotation:    f32,
-	title:       string,
-	speed:       f32,
-	health:      i32,
-	active:      bool,
-	attacks:     [dynamic]Attack,
-	scale:       f32,
+	loc:               rl.Vector2,
+	anim_index:        int,
+	anim_frame:        int,
+	anim_timer:        f32,
+	personality:       Enemy_State,
+	state:             Enemy_State,
+	rotation:          f32,
+	is_sprite_flipped: bool,
+	title:             string,
+	speed:             f32,
+	health:            i32,
+	active:            bool,
+	attacks:           [dynamic]Attack,
+	scale:             f32,
 }
 
 enemy_new :: proc(
@@ -46,6 +44,7 @@ enemy_new :: proc(
 		personality = personality,
 		state = .Idle,
 		rotation = 0,
+		is_sprite_flipped = false,
 		title = title,
 		speed = speed,
 		health = health,
@@ -112,6 +111,11 @@ enemy_movement :: proc(e: ^Enemy, p: ^Player, obstacles: []rl.Rectangle) {
 		// Try X
 		original_x := e.loc.x
 		e.loc.x = new_loc.x
+		if new_loc.x < original_x {
+			e.is_sprite_flipped = true
+		} else if new_loc.x > original_x {
+			e.is_sprite_flipped = false
+		}
 		enemy_rect := enemy_get_area(e)
 		collision := false
 		for obs in obstacles {
@@ -165,7 +169,7 @@ enemy_update_animation :: proc(e: ^Enemy, atlas: ^Sprite_Atlas, dt: f32) {
 		return
 	}
 	e.anim_timer += dt
-	frame_duration : f32 = 0.15
+	frame_duration: f32 = 0.15
 	if e.anim_timer >= frame_duration {
 		e.anim_timer -= frame_duration
 		e.anim_frame = (e.anim_frame + 1) % len(anim.rects)
@@ -177,7 +181,7 @@ enemy_draw :: proc(e: ^Enemy, atlas: ^Sprite_Atlas) {
 	h := f32(64) * e.scale
 
 	origin := rl.Vector2{w / 2, h / 2}
-	
+
 	anim_name := MONSTER_ANIMS[e.anim_index]
 	anim, found := atlas.animations[anim_name]
 	source: rl.Rectangle
@@ -193,6 +197,9 @@ enemy_draw :: proc(e: ^Enemy, atlas: ^Sprite_Atlas) {
 	dest := rl.Rectangle{e.loc.x, e.loc.y, w, h}
 
 	if tex_found {
+		if e.is_sprite_flipped {
+			source.width = -source.width
+		}
 		rl.DrawTexturePro(tex, source, dest, origin, e.rotation, rl.WHITE)
 	}
 
