@@ -1,5 +1,6 @@
 package main
 
+import "core:math"
 import "core:math/rand"
 import rl "vendor:raylib"
 
@@ -61,27 +62,12 @@ game_update :: proc(app: ^App) {
 	if !ok {return}
 	gd := &game.game_data
 
-	// Camera follows player
-	gd.camera.target = gd.player.loc
-	gd.camera.target.x = max(
-		gd.camera.offset.x,
-		min(gd.camera.target.x, game.map_width - gd.camera.offset.x),
-	)
-	gd.camera.target.y = max(
-		gd.camera.offset.y,
-		min(gd.camera.target.y, game.map_height - gd.camera.offset.y),
-	)
-
-	// --- World-space rendering ---
-	rl.BeginMode2D(gd.camera)
-	game_map_draw(&game.game_map, &gd.atlas, gd.camera)
-
+	// --- 1. Logic Update ---
 	gsr := process_game_state(gd.state, gd)
 	gd.state = gsr.new_state
 	gd.time_accumulator += f64(gsr.time_accumulator)
 
 	if gd.state == .Quit {
-		rl.EndMode2D()
 		if gd.player.health > 0 {
 			save_game(game)
 		} else {
@@ -104,21 +90,35 @@ game_update :: proc(app: ^App) {
 		update_enemies(game)
 		update_projectiles(game)
 		update_melee_attacks(game)
+		particle_system_update(&gd.particles)
 
+		// Camera follows player
+		gd.camera.target = gd.player.loc
+		gd.camera.target.x = math.clamp(gd.camera.target.x, gd.camera.offset.x, game.map_width - gd.camera.offset.x)
+		gd.camera.target.y = math.clamp(gd.camera.target.y, gd.camera.offset.y, game.map_height - gd.camera.offset.y)
+	}
+
+	// --- 2. World-space Rendering ---
+	rl.BeginMode2D(gd.camera)
+	game_map_draw(&game.game_map, &gd.atlas, gd.camera)
+
+	if !gsr.skip_loop {
 		// Draw obstructions
 		for b in game.game_map.obstructions {
 			source := rl.Rectangle{0, 0, f32(gd.boulder_tex.width), f32(gd.boulder_tex.height)}
 			rl.DrawTexturePro(gd.boulder_tex, source, b, {0, 0}, 0, rl.WHITE)
 		}
 
+		for &enemy in gd.enemies { enemy_draw(&enemy, &gd.atlas) }
+		for &proj in gd.projectiles { projectile_draw(&proj) }
+		for &atk in gd.melee_attacks { melee_draw(&atk) }
+
 		player_draw(&gd.player)
-		particle_system_update(&gd.particles)
 		particle_system_draw(&gd.particles)
 	}
 	rl.EndMode2D()
-	// --- End world-space rendering ---
 
-	// --- Screen-space overlay rendering ---
+	// --- 3. Screen-space Overlay Rendering ---
 	gd.player.selected_attack = draw_hud(
 		gd.heart_tex,
 		gd.weapons_tex[:],
@@ -128,6 +128,7 @@ game_update :: proc(app: ^App) {
 		gd.player.selected_attack,
 		gd.state == .Playing,
 	)
+	
 	switch gd.state {
 	case .Paused:
 		draw_pause_menu(app)
@@ -154,15 +155,13 @@ update_enemies :: proc(game: ^Game) {
 		enemy_update_attacks(&enemy, player_get_center(&gd.player), &gd.spawn_requests)
 	}
 
-	i := 0
-	for i < len(gd.enemies) {
+	for i := 0; i < len(gd.enemies); {
 		enemy := &gd.enemies[i]
 		if !is_in_bounds(enemy.loc, game.play_area) {enemy.active = false}
 
 		if enemy.active {
 			enemy_movement(enemy, &gd.player, game.game_map.obstructions[:])
 			enemy_update_animation(enemy, &gd.atlas, rl.GetFrameTime())
-			enemy_draw(enemy, &gd.atlas)
 			i += 1
 		} else {
 			gd.player.score += 1
@@ -173,7 +172,6 @@ update_enemies :: proc(game: ^Game) {
 			}
 			enemy_deinit(enemy)
 			unordered_remove(&gd.enemies, i)
-			// fmt.printf("Enemy removed, array count: %d\n", len(gd.enemies))
 		}
 	}
 }
@@ -190,14 +188,13 @@ update_projectiles :: proc(game: ^Game) {
 	}
 	clear(&gd.spawn_requests)
 
-	// Move, trail, draw
+	// Move and trail
 	for &proj in gd.projectiles {
 		projectile_move(&proj, gd.camera, game.play_area)
 
 		if _, is_player := proj.parent.(^Player); is_player {
 			particle_emit_trail(&gd.particles, proj.curloc, rl.GRAY)
 		}
-		projectile_draw(&proj)
 	}
 
 	resolve_projectile_collisions(gd, game.game_map.obstructions[:])
@@ -208,7 +205,6 @@ update_melee_attacks :: proc(game: ^Game) {
 
 	for &atk in gd.melee_attacks {
 		melee_update(&atk)
-		melee_draw(&atk)
 	}
 
 	resolve_melee_collisions(gd)
