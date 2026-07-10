@@ -38,12 +38,7 @@ draw_hud :: proc(
 		atk := &attacks[i]
 		eff_dmg := atk.damage * (1 + atk.upgrades.damage)
 
-		label := fmt.bprintf(
-			buf[i][:],
-			"%s\n%d DMG",
-			atk.name,
-			eff_dmg,
-		)
+		label := fmt.bprintf(buf[i][:], "%s\n%d DMG", atk.name, eff_dmg)
 		items[i] = Menu_Item {
 			label   = label,
 			hotkeys = {rl.KeyboardKey(i + 49), nil},
@@ -69,10 +64,10 @@ draw_hud :: proc(
 		nav,
 		center,
 		item_textures[:n],
-		0.75,      // opacity
-		rl.GRAY,   // border color
-		2.0,       // border width
-		scale,     // scale
+		0.85, // opacity
+		rl.GRAY, // border color
+		2.0, // border width
+		scale, // scale
 	)
 
 	if attack_selector >= 0 && &attacks[attack_selector] != selected_attack {

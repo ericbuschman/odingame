@@ -54,8 +54,7 @@ projectile_draw :: proc(proj: ^Projectile) {
 	if !proj.active {return}
 	if proj.glow {
 		rl.DrawCircleGradient(
-			i32(proj.curloc.x),
-			i32(proj.curloc.y),
+			proj.curloc,
 			proj.radius * 4.0,
 			rl.Fade(rl.RED, 0.8),
 			rl.Fade(rl.RED, 0.0),
